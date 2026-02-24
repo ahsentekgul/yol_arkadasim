@@ -1,0 +1,67 @@
+
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="YolArkadaşım - Görme engelliler için erişilebilir ulaşım navigasyon uygulaması" />
+    <meta name="keywords" content="erişilebilir navigasyon, görme engelli, ulaşım, accessibility, navigation" />
+    <meta name="theme-color" content="#0A0F1A" />
+    
+    <!-- Accessibility and SEO -->
+    <meta name="robots" content="index, follow" />
+    <meta name="author" content="YolArkadaşım" />
+    
+    <!-- Preload critical fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Icon libraries -->
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@4.1.0/fonts/remixicon.css" rel="stylesheet">
+    <script src="https://kit.fontawesome.com/your-kit-id.js" crossorigin="anonymous" defer></script>
+    
+    <title>YolArkadaşım - Erişilebilir Navigasyon</title>
+    
+    <style>
+      /* Ensure consistent font rendering */
+      * {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+        letter-spacing: 0.025em;
+      }
+      
+      /* High contrast focus indicators */
+      *:focus {
+        outline: 3px solid #60A5FA !important;
+        outline-offset: 2px !important;
+      }
+      
+      /* Ensure minimum touch target sizes */
+      button, input, select, textarea, a {
+        min-height: 44px;
+        min-width: 44px;
+      }
+      
+      /* Reduce motion for users who prefer it */
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after {
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.01ms !important;
+        }
+      }
+      
+      /* High contrast mode support */
+      @media (prefers-contrast: high) {
+        * {
+          border-color: currentColor !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
