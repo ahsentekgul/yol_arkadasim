@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'ui_kit/screens/home_screen.dart';
+import 'package:yol_arkadasim/business/home/home_screen.dart';
 
 void main() {
   runApp(const MyApp());
