@@ -56,7 +56,7 @@ class _AccessibilitySettingsState extends State<AccessibilitySettings> {
 
     final maxWidth = 448.0;
     return Material(
-      color: Colors.black.withOpacity(0.8),
+      color: Colors.black.withValues(alpha: 0.8),
       child: Center(
         child: ConstrainedBox(
           constraints: BoxConstraints(

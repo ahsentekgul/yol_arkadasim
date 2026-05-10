@@ -4,7 +4,7 @@ import 'package:yol_arkadasim/core/theme/app_colors.dart';
 import 'package:yol_arkadasim/core/theme/app_spacing.dart';
 import 'package:yol_arkadasim/core/widgets/notification_card.dart';
 import 'package:yol_arkadasim/core/widgets/app_button.dart';
-import 'package:yol_arkadasim/core/widgets/navigation_header.dart';
+import 'package:yol_arkadasim/core/widgets/app_navigation_bar.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -52,7 +52,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: const NavigationHeader(),
+      appBar: const AppNavigationBar.subPage(),
       body: SafeArea(
         child: Center(
           child: Padding(
