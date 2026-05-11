@@ -62,6 +62,28 @@ class JourneyStep {
   });
 }
 
+class JourneyNavigationMetadata {
+  final String routeId;
+  final String startStopId;
+  final AppLocation startStopLocation;
+  final String endStopId;
+  final AppLocation endStopLocation;
+  final String? destinationAddress;
+  final AppLocation destinationLocation;
+  final String? placeId;
+
+  const JourneyNavigationMetadata({
+    required this.routeId,
+    required this.startStopId,
+    required this.startStopLocation,
+    required this.endStopId,
+    required this.endStopLocation,
+    required this.destinationLocation,
+    this.destinationAddress,
+    this.placeId,
+  });
+}
+
 class JourneyPlan {
   final String destinationName;
   final String routeName;
@@ -69,6 +91,7 @@ class JourneyPlan {
   final int transferCount;
   final String startStopName;
   final String endStopName;
+  final JourneyNavigationMetadata navigationMetadata;
   final List<JourneyStep> steps;
 
   JourneyPlan({
@@ -78,6 +101,7 @@ class JourneyPlan {
     required this.transferCount,
     required this.startStopName,
     required this.endStopName,
+    required this.navigationMetadata,
     required List<JourneyStep> steps,
   }) : steps = List.unmodifiable(steps);
 }
