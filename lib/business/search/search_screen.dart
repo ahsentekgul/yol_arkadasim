@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'package:yol_arkadasim/business/routes/routes_screen.dart';
+import 'package:yol_arkadasim/business/journey_detail/journey_detail_screen.dart';
 import 'package:yol_arkadasim/data/models/place_candidate.dart';
 import 'package:yol_arkadasim/services/dummy_place_search_service.dart';
 import 'package:yol_arkadasim/services/route_planner_service.dart';
@@ -69,7 +69,9 @@ class _SearchScreenState extends State<SearchScreen> {
 
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => RoutesScreen(journeyPlan: plan)),
+      MaterialPageRoute(
+        builder: (_) => JourneyDetailScreen(journeyPlan: plan),
+      ),
     );
   }
 
