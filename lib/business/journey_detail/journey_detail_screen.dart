@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'package:yol_arkadasim/business/arrival/arrival_screen.dart';
 import 'package:yol_arkadasim/core/theme/app_colors.dart';
 import 'package:yol_arkadasim/core/theme/app_radius.dart';
 import 'package:yol_arkadasim/core/theme/app_spacing.dart';
 import 'package:yol_arkadasim/core/theme/app_text_styles.dart';
+import 'package:yol_arkadasim/core/utils/map_url_helper.dart';
 import 'package:yol_arkadasim/core/widgets/app_button.dart';
 import 'package:yol_arkadasim/core/widgets/app_navigation_bar.dart';
 import 'package:yol_arkadasim/data/models/transit_models.dart';
@@ -21,24 +23,23 @@ class JourneyDetailScreen extends StatelessWidget {
     return '${journeyPlan.transferCount} aktarma';
   }
 
-  Future<void> _showMapsInfoDialog(BuildContext context) {
-    return showDialog<void>(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: const Text('Google Maps Yönlendirmesi'),
-          content: const Text(
-            'Biniş durağına gitmeniz için Google Maps yönlendirmesi sonraki adımda eklenecek.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('Tamam'),
-            ),
-          ],
-        );
-      },
+  Future<void> _openStartStopDirections(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final uri = buildWalkingDirectionsUri(
+      journeyPlan.navigationMetadata.startStopLocation,
     );
+    final launched = await launchUrl(
+      uri,
+      mode: LaunchMode.externalApplication,
+    );
+
+    if (!launched) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Google Maps yönlendirmesi açılamadı.'),
+        ),
+      );
+    }
   }
 
   void _goToArrivalScreen(BuildContext context) {
@@ -151,7 +152,7 @@ class JourneyDetailScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: AppSpacing.spaceY4),
                     AppButton(
-                      onPressed: () => _showMapsInfoDialog(context),
+                      onPressed: () => _openStartStopDirections(context),
                       semanticsLabel:
                           '${journeyPlan.startStopName} için Google Maps ile yol tarifi al',
                       fullWidth: true,
