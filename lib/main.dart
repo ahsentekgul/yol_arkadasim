@@ -1,6 +1,7 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:yol_arkadasim/business/home/home_screen.dart';
+import 'package:yol_arkadasim/debug/temp_firestore_places_read_test.dart';
 import 'package:yol_arkadasim/firebase_options.dart';
 
 Future<void> main() async {
@@ -8,6 +9,8 @@ Future<void> main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  // Geçici: Firestore okuma testi — doğrulama sonrası silinecek.
+  runTempFirestorePlacesReadTest();
   runApp(const MyApp());
 }
 
