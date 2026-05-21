@@ -22,15 +22,10 @@ class FirestorePlaceSearchService {
           continue;
         }
 
-        final String normalizedName = _normalizeText(candidate.name);
-        final String normalizedAddress = _normalizeText(candidate.address);
-        if (normalizedName.contains(normalizedQuery) ||
-            normalizedAddress.contains(normalizedQuery)) {
-          matches.add(candidate);
-        }
+        matches.add(candidate);
       }
 
-      return matches;
+      return _filterMatches(matches, normalizedQuery);
     } catch (_) {
       return <PlaceCandidate>[];
     }
@@ -63,6 +58,52 @@ class FirestorePlaceSearchService {
         longitude: longitude.toDouble(),
       ),
     );
+  }
+
+  List<PlaceCandidate> _filterMatches(
+    List<PlaceCandidate> candidates,
+    String normalizedQuery,
+  ) {
+    if (normalizedQuery.length <= 2) {
+      return candidates
+          .where(
+            (PlaceCandidate place) => _matchesShortNameQuery(
+              _normalizeText(place.name),
+              normalizedQuery,
+            ),
+          )
+          .toList();
+    }
+
+    final List<PlaceCandidate> nameMatches = candidates
+        .where(
+          (PlaceCandidate place) =>
+              _normalizeText(place.name).contains(normalizedQuery),
+        )
+        .toList();
+
+    if (nameMatches.isNotEmpty) {
+      return nameMatches;
+    }
+
+    return candidates
+        .where(
+          (PlaceCandidate place) =>
+              _normalizeText(place.address).contains(normalizedQuery),
+        )
+        .toList();
+  }
+
+  bool _matchesShortNameQuery(
+    String normalizedName,
+    String normalizedQuery,
+  ) {
+    for (final String word in normalizedName.split(RegExp(r'\s+'))) {
+      if (word.isNotEmpty && word.startsWith(normalizedQuery)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   String _normalizeText(String input) {

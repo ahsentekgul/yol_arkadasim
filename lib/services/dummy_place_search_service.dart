@@ -48,14 +48,55 @@ class DummyPlaceSearchService {
       return <PlaceCandidate>[];
     }
 
-    final List<PlaceCandidate> matches = _places.where((PlaceCandidate place) {
-      final String normalizedName = _normalizeText(place.name);
-      final String normalizedAddress = _normalizeText(place.address);
-      return normalizedName.contains(normalizedQuery) ||
-          normalizedAddress.contains(normalizedQuery);
-    }).toList();
+    return List<PlaceCandidate>.from(
+      _filterMatches(_places, normalizedQuery),
+    );
+  }
 
-    return List<PlaceCandidate>.from(matches);
+  List<PlaceCandidate> _filterMatches(
+    List<PlaceCandidate> candidates,
+    String normalizedQuery,
+  ) {
+    if (normalizedQuery.length <= 2) {
+      return candidates
+          .where(
+            (PlaceCandidate place) => _matchesShortNameQuery(
+              _normalizeText(place.name),
+              normalizedQuery,
+            ),
+          )
+          .toList();
+    }
+
+    final List<PlaceCandidate> nameMatches = candidates
+        .where(
+          (PlaceCandidate place) =>
+              _normalizeText(place.name).contains(normalizedQuery),
+        )
+        .toList();
+
+    if (nameMatches.isNotEmpty) {
+      return nameMatches;
+    }
+
+    return candidates
+        .where(
+          (PlaceCandidate place) =>
+              _normalizeText(place.address).contains(normalizedQuery),
+        )
+        .toList();
+  }
+
+  bool _matchesShortNameQuery(
+    String normalizedName,
+    String normalizedQuery,
+  ) {
+    for (final String word in normalizedName.split(RegExp(r'\s+'))) {
+      if (word.isNotEmpty && word.startsWith(normalizedQuery)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   String _normalizeText(String input) {
