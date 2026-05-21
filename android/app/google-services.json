@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "293160569636",
+    "project_id": "akilli-toplu-tasima-asistani",
+    "storage_bucket": "akilli-toplu-tasima-asistani.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:293160569636:android:a8a28fb19653c642d8c1b1",
+        "android_client_info": {
+          "package_name": "com.example.yol_arkadasim"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCXKcTgoIvUbQBgiPyh50lyJTF8nSIRv-0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
