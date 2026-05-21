@@ -8,15 +8,51 @@ import 'package:yol_arkadasim/core/theme/app_text_styles.dart';
 import 'package:yol_arkadasim/core/widgets/app_navigation_bar.dart';
 import 'package:yol_arkadasim/data/models/place_candidate.dart';
 import 'package:yol_arkadasim/services/dummy_place_search_service.dart';
+import 'package:yol_arkadasim/services/firestore_place_search_service.dart';
 import 'package:yol_arkadasim/services/route_planner_service.dart';
 
-class PlaceResultsScreen extends StatelessWidget {
-  PlaceResultsScreen({super.key, required this.searchQuery})
-    : _places = DummyPlaceSearchService().searchPlaces(searchQuery);
+class PlaceResultsScreen extends StatefulWidget {
+  const PlaceResultsScreen({super.key, required this.searchQuery});
 
   final String searchQuery;
-  final List<PlaceCandidate> _places;
+
+  @override
+  State<PlaceResultsScreen> createState() => _PlaceResultsScreenState();
+}
+
+class _PlaceResultsScreenState extends State<PlaceResultsScreen> {
   final RoutePlannerService _routePlannerService = RoutePlannerService();
+  final FirestorePlaceSearchService _firestorePlaceSearchService =
+      FirestorePlaceSearchService();
+  final DummyPlaceSearchService _dummyPlaceSearchService =
+      DummyPlaceSearchService();
+
+  List<PlaceCandidate> _places = <PlaceCandidate>[];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPlaces();
+  }
+
+  Future<void> _loadPlaces() async {
+    List<PlaceCandidate> places = await _firestorePlaceSearchService
+        .searchPlaces(widget.searchQuery);
+
+    if (places.isEmpty) {
+      places = _dummyPlaceSearchService.searchPlaces(widget.searchQuery);
+    }
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _places = places;
+      _isLoading = false;
+    });
+  }
 
   void _createRouteForPlace(BuildContext context, PlaceCandidate place) {
     final plan = _routePlannerService.createJourneyPlanForPlace(place);
@@ -34,6 +70,13 @@ class PlaceResultsScreen extends StatelessWidget {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => JourneyDetailScreen(journeyPlan: plan)),
+    );
+  }
+
+  Widget _buildLoadingState() {
+    return const Padding(
+      padding: EdgeInsets.symmetric(vertical: AppSpacing.p8),
+      child: Center(child: CircularProgressIndicator()),
     );
   }
 
@@ -137,7 +180,7 @@ class PlaceResultsScreen extends StatelessWidget {
   Widget _buildResultsSummary() {
     return Semantics(
       label:
-          '"$searchQuery" için ${_places.length} konum sonucu bulundu. Hedef kartına dokunarak seçin.',
+          '"${widget.searchQuery}" için ${_places.length} konum sonucu bulundu. Hedef kartına dokunarak seçin.',
       child: ExcludeSemantics(
         child: Padding(
           padding: const EdgeInsets.only(bottom: AppSpacing.p6),
@@ -145,7 +188,7 @@ class PlaceResultsScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '"$searchQuery" için ${_places.length} konum sonucu bulundu',
+                '"${widget.searchQuery}" için ${_places.length} konum sonucu bulundu',
                 style: AppTextStyles.buttonLabel.copyWith(
                   fontSize: 24,
                   fontWeight: FontWeight.w800,
@@ -185,6 +228,9 @@ class PlaceResultsScreen extends StatelessWidget {
   }
 
   Widget _buildContent(BuildContext context) {
+    if (_isLoading) {
+      return _buildLoadingState();
+    }
     if (_places.isEmpty) {
       return _buildEmptyState();
     }
