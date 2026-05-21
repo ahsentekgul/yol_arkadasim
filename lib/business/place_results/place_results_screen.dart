@@ -9,6 +9,7 @@ import 'package:yol_arkadasim/core/widgets/app_navigation_bar.dart';
 import 'package:yol_arkadasim/data/models/place_candidate.dart';
 import 'package:yol_arkadasim/services/dummy_place_search_service.dart';
 import 'package:yol_arkadasim/services/firestore_place_search_service.dart';
+import 'package:yol_arkadasim/services/firestore_transit_data_service.dart';
 import 'package:yol_arkadasim/services/route_planner_service.dart';
 
 class PlaceResultsScreen extends StatefulWidget {
@@ -21,9 +22,11 @@ class PlaceResultsScreen extends StatefulWidget {
 }
 
 class _PlaceResultsScreenState extends State<PlaceResultsScreen> {
-  final RoutePlannerService _routePlannerService = RoutePlannerService();
+  RoutePlannerService _routePlannerService = RoutePlannerService();
   final FirestorePlaceSearchService _firestorePlaceSearchService =
       FirestorePlaceSearchService();
+  final FirestoreTransitDataService _firestoreTransitDataService =
+      FirestoreTransitDataService();
   final DummyPlaceSearchService _dummyPlaceSearchService =
       DummyPlaceSearchService();
 
@@ -34,6 +37,7 @@ class _PlaceResultsScreenState extends State<PlaceResultsScreen> {
   void initState() {
     super.initState();
     _loadPlaces();
+    _loadTransitData();
   }
 
   Future<void> _loadPlaces() async {
@@ -52,6 +56,36 @@ class _PlaceResultsScreenState extends State<PlaceResultsScreen> {
       _places = places;
       _isLoading = false;
     });
+  }
+
+  Future<void> _loadTransitData() async {
+    try {
+      final stops = await _firestoreTransitDataService.fetchStops();
+      final routes = await _firestoreTransitDataService.fetchTransitRoutes();
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        if (stops.isNotEmpty && routes.isNotEmpty) {
+          _routePlannerService = RoutePlannerService(
+            stops: stops,
+            transitRoutes: routes,
+          );
+        } else {
+          _routePlannerService = RoutePlannerService();
+        }
+      });
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _routePlannerService = RoutePlannerService();
+      });
+    }
   }
 
   void _createRouteForPlace(BuildContext context, PlaceCandidate place) {
