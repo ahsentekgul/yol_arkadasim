@@ -5,7 +5,7 @@ import 'package:yol_arkadasim/data/models/transit_models.dart';
 import 'package:yol_arkadasim/data/dummy/dummy_transit_data.dart';
 
 class RoutePlannerService {
-  static const double _maxWalkingDistanceMeters = 500;
+  static const double _maxWalkingDistanceMeters = 600;
 
   final AppLocation userLocation;
   final List<Stop> stops;

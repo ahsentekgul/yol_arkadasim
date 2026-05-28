@@ -8,6 +8,7 @@ import 'package:yol_arkadasim/core/theme/app_text_styles.dart';
 import 'package:yol_arkadasim/core/widgets/app_button.dart';
 import 'package:yol_arkadasim/core/widgets/app_navigation_bar.dart';
 import 'package:yol_arkadasim/data/models/place_candidate.dart';
+import 'package:yol_arkadasim/data/models/transit_models.dart';
 import 'package:yol_arkadasim/services/dummy_place_search_service.dart';
 import 'package:yol_arkadasim/services/firestore_place_search_service.dart';
 import 'package:yol_arkadasim/services/firestore_transit_data_service.dart';
@@ -23,7 +24,14 @@ class PlaceResultsScreen extends StatefulWidget {
 }
 
 class _PlaceResultsScreenState extends State<PlaceResultsScreen> {
-  RoutePlannerService _routePlannerService = RoutePlannerService();
+  static const AppLocation _demoUserLocation = AppLocation(
+    latitude: 38.70858,
+    longitude: 35.52442,
+  );
+
+  RoutePlannerService _routePlannerService = RoutePlannerService(
+    userLocation: _demoUserLocation,
+  );
   final FirestorePlaceSearchService _firestorePlaceSearchService =
       FirestorePlaceSearchService();
   final FirestoreTransitDataService _firestoreTransitDataService =
@@ -72,11 +80,14 @@ class _PlaceResultsScreenState extends State<PlaceResultsScreen> {
       setState(() {
         if (stops.isNotEmpty && routes.isNotEmpty) {
           _routePlannerService = RoutePlannerService(
+            userLocation: _demoUserLocation,
             stops: stops,
             transitRoutes: routes,
           );
         } else {
-          _routePlannerService = RoutePlannerService();
+          _routePlannerService = RoutePlannerService(
+            userLocation: _demoUserLocation,
+          );
         }
       });
     } catch (_) {
@@ -85,7 +96,9 @@ class _PlaceResultsScreenState extends State<PlaceResultsScreen> {
       }
 
       setState(() {
-        _routePlannerService = RoutePlannerService();
+        _routePlannerService = RoutePlannerService(
+          userLocation: _demoUserLocation,
+        );
       });
     }
   }
