@@ -10,6 +10,7 @@ import 'package:yol_arkadasim/core/widgets/app_navigation_bar.dart';
 import 'package:yol_arkadasim/data/models/place_candidate.dart';
 import 'package:yol_arkadasim/data/models/transit_models.dart';
 import 'package:yol_arkadasim/services/dummy_place_search_service.dart';
+import 'package:yol_arkadasim/services/favorite_places_service.dart';
 import 'package:yol_arkadasim/services/firestore_place_search_service.dart';
 import 'package:yol_arkadasim/services/firestore_transit_data_service.dart';
 import 'package:yol_arkadasim/services/route_planner_service.dart';
@@ -38,8 +39,10 @@ class _PlaceResultsScreenState extends State<PlaceResultsScreen> {
       FirestoreTransitDataService();
   final DummyPlaceSearchService _dummyPlaceSearchService =
       DummyPlaceSearchService();
+  final FavoritePlacesService _favoritePlacesService = FavoritePlacesService();
 
   List<PlaceCandidate> _places = <PlaceCandidate>[];
+  Set<String> _favoritePlaceIds = <String>{};
   bool _isPlacesLoading = true;
   bool _isTransitDataLoading = true;
   bool get _isLoading => _isPlacesLoading || _isTransitDataLoading;
@@ -60,14 +63,89 @@ class _PlaceResultsScreenState extends State<PlaceResultsScreen> {
       places = _dummyPlaceSearchService.searchPlaces(widget.searchQuery);
     }
 
+    final Set<String> favoritePlaceIds = await _loadFavoritePlaceIds();
+
     if (!mounted) {
       return;
     }
 
     setState(() {
       _places = places;
+      _favoritePlaceIds = favoritePlaceIds;
       _isPlacesLoading = false;
     });
+  }
+
+  String _normalizedPlaceId(PlaceCandidate place) {
+    return place.placeId.trim();
+  }
+
+  bool _isFavorite(PlaceCandidate place) {
+    final String placeId = _normalizedPlaceId(place);
+    if (placeId.isEmpty) {
+      return false;
+    }
+    return _favoritePlaceIds.contains(placeId);
+  }
+
+  Future<Set<String>> _loadFavoritePlaceIds() async {
+    try {
+      final favorites = await _favoritePlacesService.getFavorites();
+      final Set<String> placeIds = <String>{};
+      for (final PlaceCandidate favorite in favorites) {
+        final String placeId = _normalizedPlaceId(favorite);
+        if (placeId.isNotEmpty) {
+          placeIds.add(placeId);
+        }
+      }
+      return placeIds;
+    } catch (_) {
+      return <String>{};
+    }
+  }
+
+  Future<void> _toggleFavorite(PlaceCandidate place) async {
+    final String placeId = _normalizedPlaceId(place);
+    if (placeId.isEmpty) {
+      _showMessage('Favori işlemi yapılamadı.');
+      return;
+    }
+
+    try {
+      final bool added = await _favoritePlacesService.toggleFavorite(place);
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        if (added) {
+          _favoritePlaceIds.add(placeId);
+        } else {
+          _favoritePlaceIds.remove(placeId);
+        }
+      });
+
+      if (added) {
+        _showMessage('${place.name} favorilere eklendi.');
+      } else {
+        _showMessage('${place.name} favorilerden çıkarıldı.');
+      }
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      _showMessage('Favori işlemi tamamlanamadı.');
+    }
+  }
+
+  void _showMessage(String message) {
+    if (!mounted) {
+      return;
+    }
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
   }
 
   Future<void> _loadTransitData() async {
@@ -181,78 +259,124 @@ class _PlaceResultsScreenState extends State<PlaceResultsScreen> {
   ) {
     final int resultNumber = index + 1;
 
+    return Material(
+      color: AppColors.gray800,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadius.roundedXl),
+        side: const BorderSide(color: AppColors.gray700, width: 1.2),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _buildPlaceInfo(place, resultNumber),
+            const SizedBox(height: AppSpacing.spaceY4),
+            _buildPlaceActions(context, place),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPlaceInfo(PlaceCandidate place, int resultNumber) {
     return Semantics(
-      button: true,
-      label: '$resultNumber. sonuç. ${place.name}. ${place.address}.',
-      hint: 'Bu hedef için rota oluşturmak için çift dokunun.',
-      onTap: () => _createRouteForPlace(context, place),
+      label:
+          '$resultNumber. sonuç. ${place.name}. Adres: ${place.address}.',
       child: ExcludeSemantics(
-        child: Material(
-          color: AppColors.gray800,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppRadius.roundedXl),
-            side: const BorderSide(color: AppColors.gray700, width: 1.2),
-          ),
-          child: InkWell(
-            onTap: () => _createRouteForPlace(context, place),
-            borderRadius: BorderRadius.circular(AppRadius.roundedXl),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(minHeight: 150),
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '$resultNumber. sonuç',
-                            style: AppTextStyles.screenSubtitle.copyWith(
-                              fontSize: 16,
-                              color: AppColors.gray300,
-                            ),
-                          ),
-                          const SizedBox(height: AppSpacing.spaceX3),
-                          Text(
-                            place.name,
-                            style: AppTextStyles.buttonLabel.copyWith(
-                              fontSize: 24,
-                            ),
-                          ),
-                          const SizedBox(height: AppSpacing.spaceX3),
-                          Text(
-                            place.address,
-                            style: AppTextStyles.screenSubtitle.copyWith(
-                              fontSize: 18,
-                              color: AppColors.gray300,
-                            ),
-                          ),
-                          const SizedBox(height: AppSpacing.spaceY4),
-                          Text(
-                            'Hedefi seç',
-                            style: AppTextStyles.screenSubtitle.copyWith(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w800,
-                              color: AppColors.borderBlue500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.spaceX3),
-                    const Icon(
-                      Icons.chevron_right_rounded,
-                      color: AppColors.gray300,
-                      size: 32,
-                    ),
-                  ],
-                ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '$resultNumber. sonuç',
+              style: AppTextStyles.screenSubtitle.copyWith(
+                fontSize: 16,
+                color: AppColors.gray300,
               ),
             ),
-          ),
+            const SizedBox(height: AppSpacing.spaceX3),
+            Text(
+              place.name,
+              style: AppTextStyles.buttonLabel.copyWith(
+                fontSize: 24,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.spaceX3),
+            Text(
+              place.address,
+              style: AppTextStyles.screenSubtitle.copyWith(
+                fontSize: 18,
+                color: AppColors.gray300,
+              ),
+            ),
+          ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildPlaceActions(BuildContext context, PlaceCandidate place) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _buildRouteActionButton(context, place),
+        const SizedBox(height: AppSpacing.spaceY4),
+        _buildFavoriteActionButton(place),
+      ],
+    );
+  }
+
+  Widget _buildRouteActionButton(BuildContext context, PlaceCandidate place) {
+    return AppButton(
+      fullWidth: true,
+      size: 'large',
+      minHeight: 56,
+      backgroundColor: AppColors.blue600,
+      semanticsLabel: '${place.name} için rota oluştur',
+      onPressed: () => _createRouteForPlace(context, place),
+      child: const Text(
+        'Rota Oluştur',
+        textAlign: TextAlign.center,
+      ),
+    );
+  }
+
+  Widget _buildFavoriteActionButton(PlaceCandidate place) {
+    final bool isFavorite = _isFavorite(place);
+
+    return AppButton(
+      fullWidth: true,
+      size: 'large',
+      minHeight: 64,
+      variant: isFavorite ? 'secondary' : 'primary',
+      backgroundColor: isFavorite ? null : AppColors.orange600,
+      semanticsLabel: isFavorite
+          ? '${place.name} hedefini favorilerden çıkar'
+          : '${place.name} hedefini favorilere ekle',
+      onPressed: () => _toggleFavorite(place),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ExcludeSemantics(
+            child: Icon(
+              isFavorite ? Icons.favorite : Icons.favorite_border,
+              color: AppColors.white,
+              size: 24,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.spaceX3),
+          Flexible(
+            child: Text(
+              isFavorite ? 'Favorilerden Çıkar' : 'Favorilere Ekle',
+              textAlign: TextAlign.center,
+              softWrap: true,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: AppTextStyles.buttonLabel.copyWith(fontSize: 18),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -387,7 +511,7 @@ class _PlaceResultsScreenState extends State<PlaceResultsScreen> {
   Widget _buildResultsSummary() {
     return Semantics(
       label:
-          '"${widget.searchQuery}" için ${_places.length} konum sonucu bulundu. Hedef kartına dokunarak seçin.',
+          '"${widget.searchQuery}" için ${_places.length} konum sonucu bulundu. Her hedef için rota oluşturabilir veya favorilere ekleyebilirsiniz.',
       child: ExcludeSemantics(
         child: Padding(
           padding: const EdgeInsets.only(bottom: AppSpacing.p6),
@@ -403,7 +527,7 @@ class _PlaceResultsScreenState extends State<PlaceResultsScreen> {
               ),
               const SizedBox(height: AppSpacing.spaceX3),
               Text(
-                'Hedef kartına dokunarak seçin.',
+                'Her hedef için rota oluşturabilir veya favorilere ekleyebilirsiniz.',
                 style: AppTextStyles.screenSubtitle.copyWith(
                   fontSize: 17,
                   color: AppColors.gray300,
