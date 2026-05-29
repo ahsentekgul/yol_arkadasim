@@ -40,7 +40,9 @@ class _PlaceResultsScreenState extends State<PlaceResultsScreen> {
       DummyPlaceSearchService();
 
   List<PlaceCandidate> _places = <PlaceCandidate>[];
-  bool _isLoading = true;
+  bool _isPlacesLoading = true;
+  bool _isTransitDataLoading = true;
+  bool get _isLoading => _isPlacesLoading || _isTransitDataLoading;
   PlaceCandidate? _routeErrorPlace;
 
   @override
@@ -64,7 +66,7 @@ class _PlaceResultsScreenState extends State<PlaceResultsScreen> {
 
     setState(() {
       _places = places;
-      _isLoading = false;
+      _isPlacesLoading = false;
     });
   }
 
@@ -89,6 +91,7 @@ class _PlaceResultsScreenState extends State<PlaceResultsScreen> {
             userLocation: _demoUserLocation,
           );
         }
+        _isTransitDataLoading = false;
       });
     } catch (_) {
       if (!mounted) {
@@ -99,11 +102,23 @@ class _PlaceResultsScreenState extends State<PlaceResultsScreen> {
         _routePlannerService = RoutePlannerService(
           userLocation: _demoUserLocation,
         );
+        _isTransitDataLoading = false;
       });
     }
   }
 
   void _createRouteForPlace(BuildContext context, PlaceCandidate place) {
+    if (_isLoading) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Rota verileri yükleniyor. Lütfen birkaç saniye sonra tekrar deneyin.',
+          ),
+        ),
+      );
+      return;
+    }
+
     final plan = _routePlannerService.createJourneyPlanForPlace(place);
     if (plan == null) {
       setState(() {
@@ -123,9 +138,25 @@ class _PlaceResultsScreenState extends State<PlaceResultsScreen> {
   }
 
   Widget _buildLoadingState() {
-    return const Padding(
-      padding: EdgeInsets.symmetric(vertical: AppSpacing.p8),
-      child: Center(child: CircularProgressIndicator()),
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.p8),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(height: AppSpacing.spaceY4),
+            Text(
+              'Konum ve rota verileri yükleniyor.',
+              textAlign: TextAlign.center,
+              style: AppTextStyles.screenSubtitle.copyWith(
+                fontSize: 16,
+                color: AppColors.gray300,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
