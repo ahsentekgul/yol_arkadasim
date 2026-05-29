@@ -7,8 +7,8 @@ import 'package:yol_arkadasim/core/theme/app_spacing.dart';
 import 'package:yol_arkadasim/core/theme/app_text_styles.dart';
 import 'package:yol_arkadasim/core/widgets/app_button.dart';
 import 'package:yol_arkadasim/core/widgets/app_navigation_bar.dart';
+import 'package:yol_arkadasim/data/demo/demo_locations.dart';
 import 'package:yol_arkadasim/data/models/place_candidate.dart';
-import 'package:yol_arkadasim/data/models/transit_models.dart';
 import 'package:yol_arkadasim/services/dummy_place_search_service.dart';
 import 'package:yol_arkadasim/services/favorite_places_service.dart';
 import 'package:yol_arkadasim/services/firestore_place_search_service.dart';
@@ -25,13 +25,8 @@ class PlaceResultsScreen extends StatefulWidget {
 }
 
 class _PlaceResultsScreenState extends State<PlaceResultsScreen> {
-  static const AppLocation _demoUserLocation = AppLocation(
-    latitude: 38.70858,
-    longitude: 35.52442,
-  );
-
   RoutePlannerService _routePlannerService = RoutePlannerService(
-    userLocation: _demoUserLocation,
+    userLocation: DemoLocations.userLocation,
   );
   final FirestorePlaceSearchService _firestorePlaceSearchService =
       FirestorePlaceSearchService();
@@ -160,13 +155,13 @@ class _PlaceResultsScreenState extends State<PlaceResultsScreen> {
       setState(() {
         if (stops.isNotEmpty && routes.isNotEmpty) {
           _routePlannerService = RoutePlannerService(
-            userLocation: _demoUserLocation,
+            userLocation: DemoLocations.userLocation,
             stops: stops,
             transitRoutes: routes,
           );
         } else {
           _routePlannerService = RoutePlannerService(
-            userLocation: _demoUserLocation,
+            userLocation: DemoLocations.userLocation,
           );
         }
         _isTransitDataLoading = false;
@@ -178,7 +173,7 @@ class _PlaceResultsScreenState extends State<PlaceResultsScreen> {
 
       setState(() {
         _routePlannerService = RoutePlannerService(
-          userLocation: _demoUserLocation,
+          userLocation: DemoLocations.userLocation,
         );
         _isTransitDataLoading = false;
       });
