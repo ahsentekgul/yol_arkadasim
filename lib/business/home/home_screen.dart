@@ -6,6 +6,7 @@ import 'package:yol_arkadasim/business/search/search_screen.dart';
 import 'package:yol_arkadasim/core/widgets/app_navigation_bar.dart';
 import 'package:yol_arkadasim/business/favorites/favorites_screen.dart';
 import 'package:yol_arkadasim/core/theme/app_colors.dart';
+import 'package:yol_arkadasim/core/theme/app_radius.dart';
 import 'package:yol_arkadasim/core/theme/app_spacing.dart';
 import 'package:yol_arkadasim/core/theme/app_text_styles.dart';
 
@@ -19,7 +20,6 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   static const double _homeActionIconSize = 50;
   static const double _homeActionIconTextGap = 8;
-  static const double _homeActionBorderRadius = 12;
 
   void handleVoiceResult(String text) {
     debugPrint('Sesli komut alındı (demo): $text');
@@ -70,6 +70,13 @@ class _HomeScreenState extends State<HomeScreen> {
     MainAxisAlignment mainAxisAlignment = MainAxisAlignment.start,
     bool expandedTitle = true,
   }) {
+    final titleText = Text(
+      title,
+      style: AppTextStyles.buttonLabel,
+      maxLines: expandedTitle ? 2 : 1,
+      overflow: TextOverflow.ellipsis,
+    );
+
     return AppButton(
       onPressed: onPressed,
       semanticsLabel: semanticsLabel,
@@ -77,19 +84,24 @@ class _HomeScreenState extends State<HomeScreen> {
       size: 'custom',
       variant: 'custom',
       backgroundColor: color,
-      borderRadius: _homeActionBorderRadius,
+      borderRadius: AppRadius.roundedXl,
       minHeight: minHeight,
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         mainAxisAlignment: mainAxisAlignment,
         children: [
-          Icon(icon, size: _homeActionIconSize, color: Colors.white),
-          SizedBox(width: _homeActionIconTextGap),
+          ExcludeSemantics(
+            child: Icon(
+              icon,
+              size: _homeActionIconSize,
+              color: AppColors.white,
+            ),
+          ),
+          const SizedBox(width: _homeActionIconTextGap),
           if (expandedTitle)
-            Expanded(
-              child: Text(title, style: AppTextStyles.buttonLabel),
-            )
+            Expanded(child: titleText)
           else
-            Text(title, style: AppTextStyles.buttonLabel),
+            Flexible(child: titleText),
         ],
       ),
     );
@@ -99,59 +111,63 @@ class _HomeScreenState extends State<HomeScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const SizedBox(height: 14),
+        const SizedBox(height: AppSpacing.spaceX3),
         const Center(
           child: Text(
             'Erişilebilir ulaşım yardımcınız',
             style: AppTextStyles.screenSubtitle,
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
           ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: AppSpacing.spaceY4),
         Expanded(
           child: Column(
             children: [
               Expanded(
                 flex: 3,
                 child: _buildColoredMainCard(
-                  color: const Color(0xFF2F6BEE),
+                  color: AppColors.blue600,
                   onPressed: () => handleButtonPress('search'),
-                  semanticsLabel: 'Hedef bul - Ana arama fonksiyonu',
+                  semanticsLabel: 'Hedef bul, arama ekranını açar',
                   minHeight: 0,
                   icon: Icons.search,
                   title: 'Hedef Bul',
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.spaceX3),
               Expanded(
                 flex: 3,
                 child: _buildColoredMainCard(
-                  color: const Color(0xFF23A957),
+                  color: AppColors.green600,
                   onPressed: () => handleButtonPress('favorites'),
-                  semanticsLabel: 'Favori yerler - kayıtlı konumları görüntüle',
+                  semanticsLabel: 'Favori yerler, kayıtlı konumlarınızı gösterir',
                   minHeight: 0,
                   icon: Icons.favorite,
                   title: 'Favori Yerler',
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.spaceX3),
               Expanded(
                 flex: 3,
                 child: _buildColoredMainCard(
-                  color: const Color(0xFF9638E8),
+                  color: AppColors.orange600,
                   onPressed: () => handleButtonPress('nearby'),
-                  semanticsLabel: 'Yakın duraklar - çevredeki durakları bul',
+                  semanticsLabel: 'Yakın duraklar, çevrenizdeki durakları listeler',
                   minHeight: 0,
                   icon: Icons.place,
                   title: 'Yakın Duraklar',
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.spaceX3),
               Expanded(
                 flex: 2,
                 child: _buildColoredMainCard(
-                  color: const Color(0xFFD0911B),
+                  color: AppColors.blue600,
                   onPressed: () => handleVoiceResult('İstiklal Caddesi'),
-                  semanticsLabel: 'Sesli komut - sesle hedef belirle',
+                  semanticsLabel:
+                      'Sesli komut, demo modunda örnek komut çalıştırır',
                   minHeight: 0,
                   icon: Icons.mic_none,
                   title: 'Sesli Komut',
