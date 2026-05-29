@@ -18,6 +18,7 @@ class SearchScreen extends StatefulWidget {
 
 class _SearchScreenState extends State<SearchScreen> {
   late final TextEditingController _searchController;
+  String? _validationMessage;
 
   @override
   void initState() {
@@ -31,18 +32,22 @@ class _SearchScreenState extends State<SearchScreen> {
     super.dispose();
   }
 
+  void _clearValidationMessage() {
+    if (_validationMessage != null) {
+      setState(() => _validationMessage = null);
+    }
+  }
+
   void handleSearchSubmit() {
     final String trimmedQuery = _searchController.text.trim();
     if (trimmedQuery.isEmpty) {
-      final messenger = ScaffoldMessenger.of(context);
-      messenger.hideCurrentSnackBar();
-      messenger.showSnackBar(
-        const SnackBar(
-          content: Text('Lütfen gitmek istediğiniz konumu yazın.'),
-        ),
-      );
+      setState(() {
+        _validationMessage = 'Lütfen gitmek istediğiniz konumu yazın.';
+      });
       return;
     }
+
+    _clearValidationMessage();
 
     Navigator.push(
       context,
@@ -58,15 +63,21 @@ class _SearchScreenState extends State<SearchScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const SizedBox(height: 2),
-        const Center(
-          child: Text(
-            'Nereye gitmek\nistiyorsunuz?',
-            textAlign: TextAlign.center,
-            style: AppTextStyles.screenTitle,
+        const SizedBox(height: AppSpacing.spaceY4),
+        Center(
+          child: Semantics(
+            header: true,
+            child: Text(
+              'Nereye gitmek\nistiyorsunuz?',
+              textAlign: TextAlign.center,
+              style: AppTextStyles.screenTitle.copyWith(
+                fontSize: 34,
+                height: 1.2,
+              ),
+            ),
           ),
         ),
-        const SizedBox(height: 22),
+        const SizedBox(height: AppSpacing.p6),
         Padding(
           padding: const EdgeInsets.symmetric(
             horizontal: formHorizontalPadding,
@@ -83,22 +94,26 @@ class _SearchScreenState extends State<SearchScreen> {
               ],
             ),
             child: Semantics(
-              label: 'Hedef konumu giriş alanı',
-              hint: 'Gitmek istediğiniz konumu yazın',
+              label: 'Hedef konumu',
+              hint: 'Gitmek istediğiniz yerin adını yazın',
               textField: true,
               child: TextField(
                 controller: _searchController,
+                textInputAction: TextInputAction.search,
+                onSubmitted: (_) => handleSearchSubmit(),
+                onChanged: (_) => _clearValidationMessage(),
                 decoration: InputDecoration(
                   filled: true,
                   fillColor: AppColors.gray800,
                   hintText: 'Hedef girin...',
                   hintStyle: const TextStyle(
                     color: AppColors.gray300,
-                    fontSize: 20.0,
+                    fontSize: 22.0,
+                    fontWeight: FontWeight.w600,
                   ),
                   contentPadding: const EdgeInsets.symmetric(
                     horizontal: 20,
-                    vertical: 32,
+                    vertical: 38,
                   ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(AppRadius.rounded2xl),
@@ -107,7 +122,7 @@ class _SearchScreenState extends State<SearchScreen> {
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(AppRadius.rounded2xl),
                     borderSide: const BorderSide(
-                      color: AppColors.gray700,
+                      color: AppColors.borderBlue500,
                       width: 1.2,
                     ),
                   ),
@@ -119,63 +134,65 @@ class _SearchScreenState extends State<SearchScreen> {
                     ),
                   ),
                 ),
-                style: const TextStyle(color: Colors.white, fontSize: 24),
+                style: const TextStyle(
+                  color: AppColors.white,
+                  fontSize: 25,
+                ),
               ),
             ),
           ),
         ),
-        const SizedBox(height: 28),
+        if (_validationMessage != null) ...[
+          const SizedBox(height: AppSpacing.spaceX3),
+          Semantics(
+            liveRegion: true,
+            label: _validationMessage,
+            child: ExcludeSemantics(
+              child: Text(
+                _validationMessage!,
+                style: AppTextStyles.screenSubtitle.copyWith(
+                  color: AppColors.borderOrange500,
+                  fontSize: 18,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ),
+        ],
+        const SizedBox(height: AppSpacing.p8),
         Padding(
           padding: const EdgeInsets.symmetric(
             horizontal: formHorizontalPadding,
           ),
           child: AppButton(
             onPressed: handleSearchSubmit,
-            semanticsLabel: 'Hedef bul - girilen konum için sonuçları göster',
+            semanticsLabel: 'Hedef bul, girilen konum için sonuçları göster',
             fullWidth: true,
             size: 'xl',
-            minHeight: 115,
+            minHeight: 135,
             borderRadius: AppRadius.rounded2xl,
             backgroundColor: AppColors.blue600,
-            child: const Padding(
-              padding: EdgeInsets.symmetric(vertical: 10),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 10),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.search, color: Colors.white, size: 34),
-                  SizedBox(width: 8),
-                  Text('Hedef Bul'),
+                  ExcludeSemantics(
+                    child: Icon(
+                      Icons.search,
+                      color: AppColors.white,
+                      size: 38,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  const Text('Hedef Bul'),
                 ],
               ),
             ),
           ),
         ),
-        const SizedBox(height: 16),
-        Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: formHorizontalPadding,
-          ),
-          child: AppButton(
-            onPressed: () => debugPrint('Sesli arama (demo)'),
-            semanticsLabel: 'Sesli arama - hedefi sesle söyleyin',
-            fullWidth: true,
-            size: 'xl',
-            minHeight: 115,
-            borderRadius: AppRadius.rounded2xl,
-            backgroundColor: AppColors.yellow500,
-            child: const Padding(
-              padding: EdgeInsets.symmetric(vertical: 10),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.mic_none, color: Colors.white, size: 34),
-                  SizedBox(width: 8),
-                  Text('Sesli Arama'),
-                ],
-              ),
-            ),
-          ),
-        ),
+        const SizedBox(height: AppSpacing.p8),
       ],
     );
   }
