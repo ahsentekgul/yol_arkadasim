@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 
 import 'package:yol_arkadasim/business/journey_detail/journey_detail_screen.dart';
 import 'package:yol_arkadasim/core/theme/app_colors.dart';
@@ -33,6 +34,8 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
   bool _isTransitDataLoading = true;
   bool get _isLoading => _isFavoritesLoading || _isTransitDataLoading;
   PlaceCandidate? _routeErrorPlace;
+  String? _feedbackMessage;
+  bool _feedbackIsError = false;
 
   @override
   void initState() {
@@ -124,7 +127,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
 
   Future<void> _removeFavorite(PlaceCandidate place) async {
     if (place.placeId.trim().isEmpty) {
-      _showMessage('Favori kaldırılamadı.');
+      _showMessage('Favori kaldırılamadı.', isError: true);
       return;
     }
 
@@ -146,68 +149,114 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
       if (!mounted) {
         return;
       }
-      _showMessage('Favori kaldırılamadı.');
+      _showMessage('Favori kaldırılamadı.', isError: true);
     }
   }
 
-  void _showMessage(String message) {
+  void _showMessage(String message, {bool isError = false}) {
     if (!mounted) {
       return;
     }
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
+    setState(() {
+      _feedbackMessage = message;
+      _feedbackIsError = isError;
+    });
+    SemanticsService.announce(message, Directionality.of(context));
+  }
+
+  Widget _buildFeedbackBanner() {
+    if (_feedbackMessage == null) {
+      return const SizedBox.shrink();
+    }
+
+    final Color borderColor = _feedbackIsError
+        ? AppColors.borderOrange500
+        : AppColors.borderBlue500;
+
+    return Semantics(
+      label: _feedbackMessage,
+      child: ExcludeSemantics(
+        child: Container(
+          padding: const EdgeInsets.all(AppSpacing.p6),
+          decoration: BoxDecoration(
+            color: AppColors.gray800,
+            borderRadius: BorderRadius.circular(AppRadius.roundedXl),
+            border: Border.all(color: borderColor, width: 1.2),
+          ),
+          child: Text(
+            _feedbackMessage!,
+            style: AppTextStyles.screenSubtitle.copyWith(
+              fontSize: 17,
+              fontWeight: FontWeight.w600,
+              color: AppColors.white,
+              height: 1.35,
+            ),
+          ),
+        ),
+      ),
     );
   }
 
   Widget _buildLoadingState() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: AppSpacing.p8),
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const CircularProgressIndicator(),
-            const SizedBox(height: AppSpacing.spaceY4),
-            Text(
-              'Favoriler ve rota verileri yükleniyor.',
-              textAlign: TextAlign.center,
-              style: AppTextStyles.screenSubtitle.copyWith(
-                fontSize: 16,
-                color: AppColors.gray300,
-              ),
+    return Semantics(
+      liveRegion: true,
+      label: 'Favoriler ve rota verileri yükleniyor.',
+      child: ExcludeSemantics(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.p8),
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const CircularProgressIndicator(),
+                const SizedBox(height: AppSpacing.spaceY4),
+                Text(
+                  'Favoriler ve rota verileri yükleniyor.',
+                  textAlign: TextAlign.center,
+                  style: AppTextStyles.screenSubtitle.copyWith(
+                    fontSize: 16,
+                    color: AppColors.gray300,
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
   }
 
   Widget _buildEmptyState() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: AppSpacing.p8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            'Henüz favori hedefiniz yok.',
-            textAlign: TextAlign.center,
-            style: AppTextStyles.buttonLabel.copyWith(
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
-            ),
+    return Semantics(
+      label:
+          'Henüz favori hedefiniz yok. Hedef arama ekranından bir hedefi favorilere eklediğinizde burada görünecek.',
+      child: ExcludeSemantics(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.p8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Henüz favori hedefiniz yok.',
+                textAlign: TextAlign.center,
+                style: AppTextStyles.buttonLabel.copyWith(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.spaceY4),
+              Text(
+                'Hedef arama ekranından bir hedefi favorilere eklediğinizde burada görünecek.',
+                textAlign: TextAlign.center,
+                style: AppTextStyles.screenSubtitle.copyWith(
+                  fontSize: 17,
+                  color: AppColors.gray300,
+                  height: 1.4,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: AppSpacing.spaceY4),
-          Text(
-            'Hedef arama ekranından bir hedefi favorilere eklediğinizde burada görünecek.',
-            textAlign: TextAlign.center,
-            style: AppTextStyles.screenSubtitle.copyWith(
-              fontSize: 17,
-              color: AppColors.gray300,
-              height: 1.4,
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -217,104 +266,112 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     final String placeName = place.name;
     final String placeAddress = place.address;
 
-    return Semantics(
-      container: true,
-      liveRegion: true,
-      label:
-          'Aktarmasız rota bulunamadı. Seçilen hedef: $placeName, $placeAddress. '
-          'Bu favori hedef için şu an sistemde uygun aktarmasız rota bulunamadı.',
-      child: ExcludeSemantics(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Semantics(
+          container: true,
+          liveRegion: true,
+          label:
+              'Aktarmasız rota bulunamadı. Seçilen hedef: $placeName, $placeAddress. '
+              'Bu favori hedef için şu an sistemde uygun aktarmasız rota bulunamadı.',
+          child: ExcludeSemantics(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const ExcludeSemantics(
-                  child: Icon(
-                    Icons.warning_amber_rounded,
-                    color: AppColors.orange600,
-                    size: 32,
-                  ),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const ExcludeSemantics(
+                      child: Icon(
+                        Icons.warning_amber_rounded,
+                        color: AppColors.orange600,
+                        size: 32,
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.spaceX3),
+                    Expanded(
+                      child: Text(
+                        'Aktarmasız rota bulunamadı',
+                        style: AppTextStyles.buttonLabel.copyWith(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.white,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: AppSpacing.spaceX3),
-                Expanded(
-                  child: Text(
-                    'Aktarmasız rota bulunamadı',
-                    style: AppTextStyles.buttonLabel.copyWith(
-                      fontSize: 24,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.white,
+                const SizedBox(height: AppSpacing.spaceY4),
+                Container(
+                  padding: const EdgeInsets.all(AppSpacing.p6),
+                  decoration: BoxDecoration(
+                    color: AppColors.gray800,
+                    borderRadius: BorderRadius.circular(AppRadius.roundedXl),
+                    border: Border.all(
+                      color: AppColors.borderOrange500,
+                      width: 1.2,
                     ),
                   ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Seçilen hedef',
+                        style: AppTextStyles.screenSubtitle.copyWith(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.gray300,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.spaceX3),
+                      Text(
+                        placeName,
+                        style: AppTextStyles.buttonLabel.copyWith(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.white,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.spaceX3),
+                      Text(
+                        placeAddress,
+                        style: AppTextStyles.screenSubtitle.copyWith(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.gray300,
+                          height: 1.35,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
+                const SizedBox(height: AppSpacing.spaceY4),
+                Text(
+                  'Bu favori hedef için şu an sistemde uygun aktarmasız rota bulunamadı.',
+                  style: AppTextStyles.screenSubtitle.copyWith(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.gray300,
+                    height: 1.4,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.p8),
               ],
             ),
-            const SizedBox(height: AppSpacing.spaceY4),
-            Container(
-              padding: const EdgeInsets.all(AppSpacing.p6),
-              decoration: BoxDecoration(
-                color: AppColors.gray800,
-                borderRadius: BorderRadius.circular(AppRadius.roundedXl),
-                border: Border.all(color: AppColors.gray700, width: 1.2),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Seçilen hedef',
-                    style: AppTextStyles.screenSubtitle.copyWith(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.gray300,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.spaceX3),
-                  Text(
-                    placeName,
-                    style: AppTextStyles.buttonLabel.copyWith(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.white,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.spaceX3),
-                  Text(
-                    placeAddress,
-                    style: AppTextStyles.screenSubtitle.copyWith(
-                      fontSize: 17,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.gray300,
-                      height: 1.35,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: AppSpacing.spaceY4),
-            Text(
-              'Bu favori hedef için şu an sistemde uygun aktarmasız rota bulunamadı.',
-              style: AppTextStyles.screenSubtitle.copyWith(
-                fontSize: 17,
-                fontWeight: FontWeight.w600,
-                color: AppColors.gray300,
-                height: 1.4,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.p8),
-            AppButton(
-              fullWidth: true,
-              semanticsLabel: 'Favorilere geri dön',
-              onPressed: () {
-                setState(() {
-                  _routeErrorPlace = null;
-                });
-              },
-              child: const Text('Favorilere geri dön'),
-            ),
-          ],
+          ),
         ),
-      ),
+        AppButton(
+          fullWidth: true,
+          semanticsLabel: 'Favorilere geri dön',
+          onPressed: () {
+            setState(() {
+              _routeErrorPlace = null;
+            });
+          },
+          child: const Text('Favorilere geri dön'),
+        ),
+      ],
     );
   }
 
@@ -323,7 +380,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
       color: AppColors.gray800,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppRadius.roundedXl),
-        side: const BorderSide(color: AppColors.gray700, width: 1.2),
+        side: const BorderSide(color: AppColors.borderBlue500, width: 1.2),
       ),
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -419,7 +476,6 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
         'Favorilerden Çıkar',
         textAlign: TextAlign.center,
         maxLines: 2,
-        overflow: TextOverflow.ellipsis,
       ),
     );
   }
@@ -450,16 +506,25 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
   }
 
   Widget _buildFavoritesView(BuildContext context) {
+    final bool hasFeedback = _feedbackMessage != null;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Center(
-          child: Text(
-            'Favorileriniz',
-            style: AppTextStyles.screenTitle,
+        Center(
+          child: Semantics(
+            header: true,
+            child: Text(
+              'Favori hedefleriniz',
+              style: AppTextStyles.screenTitle,
+            ),
           ),
         ),
         const SizedBox(height: AppSpacing.p6),
+        if (hasFeedback) ...[
+          _buildFeedbackBanner(),
+          const SizedBox(height: AppSpacing.spaceY4),
+        ],
         _buildContent(context),
       ],
     );
