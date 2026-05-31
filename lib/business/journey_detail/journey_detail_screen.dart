@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:yol_arkadasim/business/arrival/arrival_screen.dart';
@@ -11,20 +12,22 @@ import 'package:yol_arkadasim/core/widgets/app_button.dart';
 import 'package:yol_arkadasim/core/widgets/app_navigation_bar.dart';
 import 'package:yol_arkadasim/data/models/transit_models.dart';
 
-class JourneyDetailScreen extends StatelessWidget {
+class JourneyDetailScreen extends StatefulWidget {
   const JourneyDetailScreen({super.key, required this.journeyPlan});
 
   final JourneyPlan journeyPlan;
 
-  String get _transferText {
-    if (journeyPlan.transferCount == 0) {
-      return 'Aktarmasız';
-    }
-    return '${journeyPlan.transferCount} aktarma';
-  }
+  @override
+  State<JourneyDetailScreen> createState() => _JourneyDetailScreenState();
+}
 
-  Future<void> _openStartStopDirections(BuildContext context) async {
-    final messenger = ScaffoldMessenger.of(context);
+class _JourneyDetailScreenState extends State<JourneyDetailScreen> {
+  String? _feedbackMessage;
+
+  JourneyPlan get journeyPlan => widget.journeyPlan;
+
+  Future<void> _openStartStopDirections() async {
+    const errorMessage = 'Google Maps yönlendirmesi açılamadı.';
     final uri = buildWalkingDirectionsUri(
       journeyPlan.navigationMetadata.startStopLocation,
     );
@@ -33,16 +36,18 @@ class JourneyDetailScreen extends StatelessWidget {
       mode: LaunchMode.externalApplication,
     );
 
-    if (!launched) {
-      messenger.showSnackBar(
-        const SnackBar(
-          content: Text('Google Maps yönlendirmesi açılamadı.'),
-        ),
-      );
+    if (!mounted) return;
+
+    if (launched) {
+      setState(() => _feedbackMessage = null);
+      return;
     }
+
+    setState(() => _feedbackMessage = errorMessage);
+    SemanticsService.announce(errorMessage, Directionality.of(context));
   }
 
-  void _goToArrivalScreen(BuildContext context) {
+  void _goToArrivalScreen() {
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -56,34 +61,68 @@ class JourneyDetailScreen extends StatelessWidget {
     required String value,
   }) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
+      padding: const EdgeInsets.only(bottom: AppSpacing.spaceX3),
+      child: Semantics(
+        label: '$label: $value',
+        child: ExcludeSemantics(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: AppTextStyles.screenSubtitle.copyWith(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  height: 1.25,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                value,
+                style: AppTextStyles.buttonLabel.copyWith(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFeedbackBanner(String message) {
+    return Semantics(
+      container: true,
+      label: message,
+      child: ExcludeSemantics(
+        child: Container(
+          padding: const EdgeInsets.all(AppSpacing.p6),
+          decoration: BoxDecoration(
+            color: AppColors.gray800,
+            borderRadius: BorderRadius.circular(AppRadius.rounded2xl),
+            border: Border.all(
+              color: AppColors.borderOrange500,
+              width: 1.2,
+            ),
+          ),
+          child: Text(
+            message,
             style: AppTextStyles.screenSubtitle.copyWith(
-              fontSize: 14,
+              color: AppColors.white,
+              fontSize: 18,
               fontWeight: FontWeight.w700,
+              height: 1.35,
             ),
           ),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: AppTextStyles.buttonLabel.copyWith(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final String? destinationAddress =
-        journeyPlan.navigationMetadata.destinationAddress;
+    final String? feedbackMessage = _feedbackMessage;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -98,22 +137,27 @@ class JourneyDetailScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text(
-                      'Rota Detayı',
-                      style: AppTextStyles.screenTitle.copyWith(fontSize: 28),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Biniş durağına gitmeye hazırlanın',
-                      style: AppTextStyles.screenSubtitle.copyWith(fontSize: 18),
+                    Semantics(
+                      header: true,
+                      child: Text(
+                        'Rota Detayı',
+                        style: AppTextStyles.screenTitle.copyWith(
+                          fontSize: 32,
+                          height: 1.2,
+                        ),
+                      ),
                     ),
                     const SizedBox(height: AppSpacing.spaceY4),
                     Container(
                       padding: const EdgeInsets.all(AppSpacing.p6),
                       decoration: BoxDecoration(
                         color: AppColors.gray800,
-                        borderRadius: BorderRadius.circular(AppRadius.rounded2xl),
-                        border: Border.all(color: AppColors.gray700),
+                        borderRadius:
+                            BorderRadius.circular(AppRadius.rounded2xl),
+                        border: Border.all(
+                          color: AppColors.borderBlue500,
+                          width: 1.2,
+                        ),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -131,10 +175,6 @@ class JourneyDetailScreen extends StatelessWidget {
                             value: journeyPlan.totalDurationText,
                           ),
                           _buildInfoRow(
-                            label: 'Aktarma bilgisi',
-                            value: _transferText,
-                          ),
-                          _buildInfoRow(
                             label: 'Biniş durağı',
                             value: journeyPlan.startStopName,
                           ),
@@ -142,17 +182,16 @@ class JourneyDetailScreen extends StatelessWidget {
                             label: 'İniş durağı',
                             value: journeyPlan.endStopName,
                           ),
-                          if (destinationAddress != null)
-                            _buildInfoRow(
-                              label: 'Hedef adresi',
-                              value: destinationAddress,
-                            ),
                         ],
                       ),
                     ),
+                    if (feedbackMessage != null) ...[
+                      const SizedBox(height: AppSpacing.spaceY4),
+                      _buildFeedbackBanner(feedbackMessage),
+                    ],
                     const SizedBox(height: AppSpacing.spaceY4),
                     AppButton(
-                      onPressed: () => _openStartStopDirections(context),
+                      onPressed: _openStartStopDirections,
                       semanticsLabel:
                           '${journeyPlan.startStopName} için Google Maps ile yol tarifi al',
                       fullWidth: true,
@@ -162,12 +201,16 @@ class JourneyDetailScreen extends StatelessWidget {
                       backgroundColor: AppColors.blue600,
                       child: const Padding(
                         padding: EdgeInsets.symmetric(vertical: 8),
-                        child: Text('Biniş Durağına Yol Tarifi Al'),
+                        child: Text(
+                          'Biniş Durağına Yol Tarifi Al',
+                          textAlign: TextAlign.center,
+                          softWrap: true,
+                        ),
                       ),
                     ),
                     const SizedBox(height: AppSpacing.spaceY4),
                     AppButton(
-                      onPressed: () => _goToArrivalScreen(context),
+                      onPressed: _goToArrivalScreen,
                       semanticsLabel:
                           'Durağa ulaştım, otobüs bekleme ekranına geç',
                       fullWidth: true,
@@ -177,7 +220,11 @@ class JourneyDetailScreen extends StatelessWidget {
                       backgroundColor: AppColors.green600,
                       child: const Padding(
                         padding: EdgeInsets.symmetric(vertical: 8),
-                        child: Text('Durağa Ulaştım'),
+                        child: Text(
+                          'Durağa Ulaştım',
+                          textAlign: TextAlign.center,
+                          softWrap: true,
+                        ),
                       ),
                     ),
                   ],
