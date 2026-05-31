@@ -23,31 +23,69 @@ class ArrivalScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildInfoRow({
-    required String label,
-    required String value,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+  Widget _buildMainRouteInfo({required String routeName}) {
+    return Semantics(
+      label: 'Beklenecek otobüs: $routeName',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            label,
-            style: AppTextStyles.screenSubtitle.copyWith(
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
+          ExcludeSemantics(
+            child: Text(
+              'Beklenecek otobüs',
+              style: AppTextStyles.screenSubtitle.copyWith(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
           const SizedBox(height: 4),
-          Text(
-            value,
-            style: AppTextStyles.buttonLabel.copyWith(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
+          ExcludeSemantics(
+            child: Text(
+              routeName,
+              style: AppTextStyles.buttonLabel.copyWith(
+                fontSize: 40,
+                fontWeight: FontWeight.w900,
+              ),
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildInfoRow({
+    required String label,
+    required String value,
+    bool isLast = false,
+  }) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: isLast ? 0 : 16),
+      child: Semantics(
+        label: '$label: $value',
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ExcludeSemantics(
+              child: Text(
+                label,
+                style: AppTextStyles.screenSubtitle.copyWith(
+                  fontSize: 19,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            const SizedBox(height: 4),
+            ExcludeSemantics(
+              child: Text(
+                value,
+                style: AppTextStyles.buttonLabel.copyWith(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -61,49 +99,41 @@ class ArrivalScreen extends StatelessWidget {
         child: SingleChildScrollView(
           child: Padding(
             padding: const EdgeInsets.all(AppSpacing.p6),
-            child: Center(
+            child: Align(
+              alignment: Alignment.topCenter,
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 480),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text(
-                      'Biniş durağına ulaştınız',
-                      style: AppTextStyles.screenTitle.copyWith(fontSize: 28),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Otobüs bekleniyor',
-                      style: AppTextStyles.screenSubtitle.copyWith(fontSize: 18),
+                    Semantics(
+                      header: true,
+                      child: Text(
+                        'Biniş durağına ulaştınız',
+                        style: AppTextStyles.screenTitle.copyWith(fontSize: 28),
+                      ),
                     ),
                     const SizedBox(height: AppSpacing.spaceY4),
                     Container(
-                      padding: const EdgeInsets.all(AppSpacing.p6),
+                      padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 30),
                       decoration: BoxDecoration(
                         color: AppColors.gray800,
                         borderRadius: BorderRadius.circular(AppRadius.rounded2xl),
-                        border: Border.all(color: AppColors.gray700),
+                        border: Border.all(color: AppColors.borderBlue500),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          _buildMainRouteInfo(routeName: journeyPlan.routeName),
+                          const SizedBox(height: 20),
                           _buildInfoRow(
-                            label: 'Hat adı',
-                            value: journeyPlan.routeName,
-                          ),
-                          _buildInfoRow(
-                            label: 'Biniş durağı',
+                            label: 'Bulunduğunuz durak',
                             value: journeyPlan.startStopName,
                           ),
                           _buildInfoRow(
-                            label: 'İniş durağı',
+                            label: 'İneceğiniz durak',
                             value: journeyPlan.endStopName,
-                          ),
-                          Text(
-                            'Hedef: ${journeyPlan.destinationName}',
-                            style: AppTextStyles.screenSubtitle.copyWith(
-                              fontSize: 14,
-                            ),
+                            isLast: true,
                           ),
                         ],
                       ),
@@ -111,7 +141,7 @@ class ArrivalScreen extends StatelessWidget {
                     const SizedBox(height: AppSpacing.spaceY4),
                     AppButton(
                       onPressed: () => _goToJourneySteps(context),
-                      semanticsLabel: 'Otobüse bindim, yolculuk adımlarına geç',
+                      semanticsLabel: 'Otobüse bindim, yolculuk adımlarını başlat',
                       fullWidth: true,
                       size: 'xl',
                       minHeight: 72,
@@ -119,7 +149,10 @@ class ArrivalScreen extends StatelessWidget {
                       backgroundColor: AppColors.blue600,
                       child: const Padding(
                         padding: EdgeInsets.symmetric(vertical: 8),
-                        child: Text('Otobüse Bindim'),
+                        child: Text(
+                          'Otobüse Bindim',
+                          textAlign: TextAlign.center,
+                        ),
                       ),
                     ),
                   ],
