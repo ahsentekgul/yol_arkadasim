@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 
 import 'package:yol_arkadasim/business/journey_detail/journey_detail_screen.dart';
+import 'package:yol_arkadasim/business/shared/widgets/no_direct_route_state.dart';
 import 'package:yol_arkadasim/core/theme/app_colors.dart';
 import 'package:yol_arkadasim/core/theme/app_radius.dart';
 import 'package:yol_arkadasim/core/theme/app_spacing.dart';
@@ -199,12 +200,8 @@ class _PlaceResultsScreenState extends State<PlaceResultsScreen> {
 
   void _createRouteForPlace(BuildContext context, PlaceCandidate place) {
     if (_isLoading) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Rota verileri yükleniyor. Lütfen birkaç saniye sonra tekrar deneyin.',
-          ),
-        ),
+      _showFeedback(
+        'Rota verileri yükleniyor. Lütfen birkaç saniye sonra tekrar deneyin.',
       );
       return;
     }
@@ -396,7 +393,6 @@ class _PlaceResultsScreenState extends State<PlaceResultsScreen> {
               textAlign: TextAlign.center,
               softWrap: true,
               maxLines: 2,
-              overflow: TextOverflow.ellipsis,
               style: AppTextStyles.buttonLabel.copyWith(fontSize: 18),
             ),
           ),
@@ -407,136 +403,20 @@ class _PlaceResultsScreenState extends State<PlaceResultsScreen> {
 
   Widget _buildRouteNotFoundState(BuildContext context) {
     final PlaceCandidate place = _routeErrorPlace!;
-    final String placeName = place.name;
-    final String placeAddress = place.address;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Semantics(
-          container: true,
-          liveRegion: true,
-          label:
-              'Aktarmasız rota bulunamadı. Seçilen hedef: $placeName, $placeAddress. '
-              'Bu hedef için şu an sistemde uygun aktarmasız rota bulunamadı. '
-              'Daha doğru yönlendirme için ilgili ulaşım birimiyle iletişime geçebilirsiniz. '
-              'Kayseri Ulaşım Belediye iletişim bilgisi: Resmi numara eklenecek.',
-          child: ExcludeSemantics(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const ExcludeSemantics(
-                      child: Icon(
-                        Icons.warning_amber_rounded,
-                        color: AppColors.orange600,
-                        size: 32,
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.spaceX3),
-                    Expanded(
-                      child: Text(
-                        'Aktarmasız rota bulunamadı',
-                        style: AppTextStyles.buttonLabel.copyWith(
-                          fontSize: 24,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.white,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.spaceY4),
-                Container(
-                  padding: const EdgeInsets.all(AppSpacing.p6),
-                  decoration: BoxDecoration(
-                    color: AppColors.gray800,
-                    borderRadius: BorderRadius.circular(AppRadius.roundedXl),
-                    border: Border.all(
-                      color: AppColors.borderBlue500,
-                      width: 1.2,
-                    ),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Seçilen hedef',
-                        style: AppTextStyles.screenSubtitle.copyWith(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.gray300,
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.spaceX3),
-                      Text(
-                        placeName,
-                        style: AppTextStyles.buttonLabel.copyWith(
-                          fontSize: 22,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.white,
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.spaceX3),
-                      Text(
-                        placeAddress,
-                        style: AppTextStyles.screenSubtitle.copyWith(
-                          fontSize: 17,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.gray300,
-                          height: 1.35,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.spaceY4),
-                Text(
-                  'Bu hedef için şu an sistemde uygun aktarmasız rota bulunamadı.\n'
-                  'Daha doğru yönlendirme için ilgili ulaşım birimiyle iletişime geçebilirsiniz.',
-                  style: AppTextStyles.screenSubtitle.copyWith(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.gray300,
-                    height: 1.4,
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.spaceY4),
-                Text(
-                  'Kayseri Ulaşım / Belediye iletişim bilgisi: Resmi numara eklenecek.',
-                  style: AppTextStyles.screenSubtitle.copyWith(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.borderOrange500,
-                    height: 1.35,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: AppSpacing.p8),
-        AppButton(
-          fullWidth: true,
-          semanticsLabel: 'Sonuçlara geri dön',
-          onPressed: () {
-            setState(() {
-              _routeErrorPlace = null;
-            });
-          },
-          child: const Text('Sonuçlara geri dön'),
-        ),
-        const SizedBox(height: AppSpacing.spaceY4),
-        AppButton(
-          fullWidth: true,
-          variant: 'secondary',
-          semanticsLabel: 'Yeni arama yap',
-          onPressed: () => Navigator.maybePop(context),
-          child: const Text('Yeni arama yap'),
-        ),
-      ],
+    return NoDirectRouteState(
+      placeName: place.name,
+      placeAddress: place.address,
+      primaryButtonText: 'Sonuçlara geri dön',
+      primaryButtonSemanticsLabel: 'Sonuçlara geri dön',
+      onPrimaryPressed: () {
+        setState(() {
+          _routeErrorPlace = null;
+        });
+      },
+      secondaryButtonText: 'Yeni arama yap',
+      secondaryButtonSemanticsLabel: 'Yeni arama yap',
+      onSecondaryPressed: () => Navigator.maybePop(context),
     );
   }
 
