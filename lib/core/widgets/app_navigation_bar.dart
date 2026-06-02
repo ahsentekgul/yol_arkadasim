@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:yol_arkadasim/core/accessibility/accessibility_settings_screen.dart';
 import 'package:yol_arkadasim/core/theme/app_colors.dart';
 import 'package:yol_arkadasim/core/theme/app_text_styles.dart';
 
@@ -11,49 +12,44 @@ class AppNavigationBar extends StatelessWidget implements PreferredSizeWidget {
   final _AppNavigationBarKind _kind;
   final String title;
   final VoidCallback? onBackPressed;
-  final VoidCallback? onSettingsPressed;
 
   const AppNavigationBar._({
     super.key,
     required _AppNavigationBarKind kind,
     this.title = _defaultTitle,
     this.onBackPressed,
-    this.onSettingsPressed,
   }) : _kind = kind;
 
   const AppNavigationBar.home({
     Key? key,
     String title = _defaultTitle,
-    VoidCallback? onSettingsPressed,
   }) : this._(
           key: key,
           kind: _AppNavigationBarKind.home,
           title: title,
-          onSettingsPressed: onSettingsPressed,
         );
 
   const AppNavigationBar.subPage({
     Key? key,
     String title = _defaultTitle,
     VoidCallback? onBackPressed,
-    VoidCallback? onSettingsPressed,
   }) : this._(
           key: key,
           kind: _AppNavigationBarKind.subPage,
           title: title,
           onBackPressed: onBackPressed,
-          onSettingsPressed: onSettingsPressed,
         );
 
   @override
   Size get preferredSize => const Size.fromHeight(kToolbarHeight);
 
-  void _handleSettingsPressed() {
-    if (onSettingsPressed != null) {
-      onSettingsPressed!();
-    } else {
-      debugPrint('Erişilebilirlik ayarları');
-    }
+  void _handleSettingsPressed(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute<void>(
+        builder: (context) => const AccessibilitySettingsScreen(),
+      ),
+    );
   }
 
   Widget _buildLogoLeading() {
@@ -118,7 +114,7 @@ class AppNavigationBar extends StatelessWidget implements PreferredSizeWidget {
         IconButton(
           icon: const Icon(Icons.settings),
           tooltip: 'Erişilebilirlik ayarları',
-          onPressed: _handleSettingsPressed,
+          onPressed: () => _handleSettingsPressed(context),
         ),
       ],
     );
