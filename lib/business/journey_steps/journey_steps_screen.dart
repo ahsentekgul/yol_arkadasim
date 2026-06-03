@@ -96,6 +96,39 @@ class _JourneyStepsScreenState extends State<JourneyStepsScreen> {
     }
   }
 
+  double get _cardHeight {
+    switch (_stage) {
+      case _JourneySimulationStage.onBus:
+        return 520;
+      case _JourneySimulationStage.oneStopBefore:
+        return 520;
+      case _JourneySimulationStage.arrivedAtEndStop:
+        return 460;
+      case _JourneySimulationStage.completed:
+        return 440;
+    }
+  }
+
+  double get _cardVerticalPadding {
+    switch (_stage) {
+      case _JourneySimulationStage.arrivedAtEndStop:
+        return 36;
+      default:
+        return 40;
+    }
+  }
+
+  double get _topContentSpacing {
+    switch (_stage) {
+      case _JourneySimulationStage.onBus:
+      case _JourneySimulationStage.oneStopBefore:
+        return 20;
+      case _JourneySimulationStage.arrivedAtEndStop:
+      case _JourneySimulationStage.completed:
+        return 8;
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -109,10 +142,10 @@ class _JourneyStepsScreenState extends State<JourneyStepsScreen> {
         return;
       case _JourneySimulationStage.oneStopBefore:
         message =
-            'İnmenize 1 durak kaldı. İnmeye hazırlanın. Bir sonraki durakta ineceksiniz: ${widget.journeyPlan.endStopName}.';
+            'İnmenize 1 durak kaldı. Sonraki durak: ${widget.journeyPlan.endStopName}. Sonraki durak iniş durağınız. Lütfen inmeye hazırlanın.';
       case _JourneySimulationStage.arrivedAtEndStop:
         message =
-            'İniş durağına ulaştınız. ${widget.journeyPlan.endStopName} durağına geldiniz. Bu durak, ineceğiniz duraktır. Lütfen güvenli şekilde inin.';
+            'İniş durağına ulaştınız. İniş durağı: ${widget.journeyPlan.endStopName}. Bu durak, ineceğiniz duraktır. Lütfen güvenli şekilde inin.';
       case _JourneySimulationStage.completed:
         message = 'Yolculuk tamamlandı.';
     }
@@ -153,14 +186,7 @@ class _JourneyStepsScreenState extends State<JourneyStepsScreen> {
 
   void _completeJourney() {
     _simulationTimer?.cancel();
-    final previousStage = _stage;
-    setState(() {
-      _stage = _JourneySimulationStage.completed;
-      _elapsedSeconds = _totalSimulationSeconds;
-    });
-    if (_stage != previousStage) {
-      _announceStageChange(_stage);
-    }
+    Navigator.of(context).popUntil((route) => route.isFirst);
   }
 
   Widget _buildInfoRow({
@@ -169,36 +195,34 @@ class _JourneyStepsScreenState extends State<JourneyStepsScreen> {
     double labelFontSize = 19,
     double valueFontSize = 22,
     FontWeight valueFontWeight = FontWeight.w700,
-    bool isLast = false,
   }) {
-    return Padding(
-      padding: EdgeInsets.only(bottom: isLast ? 0 : 20),
-      child: Semantics(
-        label: '$label: $value',
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ExcludeSemantics(
-              child: Text(
-                label,
-                style: AppTextStyles.screenSubtitle.copyWith(
-                  fontSize: labelFontSize,
-                  fontWeight: FontWeight.w700,
-                ),
+    return Semantics(
+      label: '$label: $value',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ExcludeSemantics(
+            child: Text(
+              label,
+              style: AppTextStyles.screenSubtitle.copyWith(
+                fontSize: labelFontSize,
+                fontWeight: FontWeight.w800,
+                color: AppColors.white,
               ),
             ),
-            const SizedBox(height: 4),
-            ExcludeSemantics(
-              child: Text(
-                value,
-                style: AppTextStyles.buttonLabel.copyWith(
-                  fontSize: valueFontSize,
-                  fontWeight: valueFontWeight,
-                ),
+          ),
+          const SizedBox(height: 4),
+          ExcludeSemantics(
+            child: Text(
+              value,
+              style: AppTextStyles.buttonLabel.copyWith(
+                fontSize: valueFontSize,
+                fontWeight: valueFontWeight,
+                color: AppColors.white,
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -212,8 +236,8 @@ class _JourneyStepsScreenState extends State<JourneyStepsScreen> {
           value: _progressValue,
           backgroundColor: AppColors.gray700,
           color: _stageBorderColor,
-          minHeight: 8,
-          borderRadius: BorderRadius.circular(4),
+          minHeight: 12,
+          borderRadius: BorderRadius.circular(6),
         ),
       ),
     );
@@ -223,32 +247,58 @@ class _JourneyStepsScreenState extends State<JourneyStepsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildInfoRow(
-          label: 'İneceğiniz durak',
-          value: widget.journeyPlan.endStopName,
-          labelFontSize: 20,
-          valueFontSize: 34,
-          valueFontWeight: FontWeight.w800,
-        ),
-        _buildInfoRow(
-          label: 'Gideceğiniz yer',
-          value: widget.journeyPlan.destinationName,
-          labelFontSize: 19,
-          valueFontSize: 22,
-        ),
-        Semantics(
-          label: 'Bilgilendirme: $_approachWarningMessage',
-          child: ExcludeSemantics(
-            child: Text(
-              _approachWarningMessage,
-              style: AppTextStyles.screenSubtitle.copyWith(
-                fontSize: 21,
-                height: 1.35,
-              ),
+        Expanded(
+          child: SingleChildScrollView(
+            physics: const ClampingScrollPhysics(),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildInfoRow(
+                  label: 'İneceğiniz durak',
+                  value: widget.journeyPlan.endStopName,
+                  labelFontSize: 22,
+                  valueFontSize: 36,
+                  valueFontWeight: FontWeight.w800,
+                ),
+                const ExcludeSemantics(
+                  child: Divider(
+                    height: 32,
+                    thickness: 1,
+                    color: AppColors.gray700,
+                  ),
+                ),
+                _buildInfoRow(
+                  label: 'Gideceğiniz yer',
+                  value: widget.journeyPlan.destinationName,
+                  labelFontSize: 22,
+                  valueFontSize: 28,
+                  valueFontWeight: FontWeight.w800,
+                ),
+                const ExcludeSemantics(
+                  child: Divider(
+                    height: 32,
+                    thickness: 1,
+                    color: AppColors.gray700,
+                  ),
+                ),
+                Semantics(
+                  label: 'Bilgilendirme: $_approachWarningMessage',
+                  child: ExcludeSemantics(
+                    child: Text(
+                      _approachWarningMessage,
+                      style: AppTextStyles.screenSubtitle.copyWith(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.white,
+                        height: 1.35,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ),
-        const SizedBox(height: 12),
         _buildProgressIndicator(),
       ],
     );
@@ -256,97 +306,153 @@ class _JourneyStepsScreenState extends State<JourneyStepsScreen> {
 
   Widget _buildWarningContent() {
     final stopName = widget.journeyPlan.endStopName;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Semantics(
-          label:
-              'Uyarı: İnmeye hazırlanın. Bir sonraki durakta ineceksiniz: $stopName.',
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              ExcludeSemantics(
-                child: Text(
-                  'İnmeye hazırlanın',
-                  style: AppTextStyles.buttonLabel.copyWith(
-                    fontSize: 30,
-                    fontWeight: FontWeight.w900,
+    const warningLine1 = 'Sonraki durak iniş durağınız.';
+    const warningLine2 = 'Lütfen inmeye hazırlanın.';
+    return Semantics(
+      label:
+          'Uyarı: İnmenize 1 durak kaldı. Sonraki durak: $stopName. $warningLine1 $warningLine2',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Flexible(
+            fit: FlexFit.loose,
+            child: SingleChildScrollView(
+              physics: const ClampingScrollPhysics(),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ExcludeSemantics(
+                    child: Text(
+                      'Sonraki durak',
+                      style: AppTextStyles.screenSubtitle.copyWith(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.white,
+                      ),
+                    ),
                   ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              ExcludeSemantics(
-                child: Text(
-                  'Bir sonraki durakta ineceksiniz:',
-                  style: AppTextStyles.screenSubtitle.copyWith(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w600,
+                  const SizedBox(height: 4),
+                  ExcludeSemantics(
+                    child: Text(
+                      stopName,
+                      style: AppTextStyles.buttonLabel.copyWith(
+                        fontSize: 36,
+                        fontWeight: FontWeight.w900,
+                        color: AppColors.white,
+                      ),
+                    ),
                   ),
-                ),
-              ),
-              const SizedBox(height: 6),
-              ExcludeSemantics(
-                child: Text(
-                  stopName,
-                  style: AppTextStyles.buttonLabel.copyWith(
-                    fontSize: 32,
-                    fontWeight: FontWeight.w800,
+                  const ExcludeSemantics(
+                    child: Divider(
+                      height: 32,
+                      thickness: 1,
+                      color: AppColors.gray700,
+                    ),
                   ),
-                ),
+                ],
               ),
-            ],
+            ),
           ),
-        ),
-        const SizedBox(height: 12),
-        _buildProgressIndicator(),
-      ],
+          Expanded(
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: ExcludeSemantics(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      warningLine1,
+                      style: AppTextStyles.buttonLabel.copyWith(
+                        fontSize: 28,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.white,
+                        height: 1.25,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      warningLine2,
+                      style: AppTextStyles.buttonLabel.copyWith(
+                        fontSize: 26,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.white,
+                        height: 1.25,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          _buildProgressIndicator(),
+        ],
+      ),
     );
   }
 
   Widget _buildArrivedContent() {
     final stopName = widget.journeyPlan.endStopName;
+    const infoMessageSemantic =
+        'Bu durak, ineceğiniz duraktır. Lütfen güvenli şekilde inin.';
+    const infoMessageVisual =
+        'Bu durak, ineceğiniz duraktır.\nLütfen güvenli şekilde inin.';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Semantics(
-          label:
-              'İniş durağına ulaştınız. $stopName durağına geldiniz. Bu durak, ineceğiniz duraktır. Lütfen güvenli şekilde inin.',
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              ExcludeSemantics(
-                child: Text(
-                  '$stopName durağına geldiniz.',
-                  style: AppTextStyles.buttonLabel.copyWith(
-                    fontSize: 30,
-                    fontWeight: FontWeight.w800,
+        Expanded(
+          child: SingleChildScrollView(
+            physics: const ClampingScrollPhysics(),
+            child: Semantics(
+              label:
+                  'İniş durağına ulaştınız. İniş durağı: $stopName. $infoMessageSemantic',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ExcludeSemantics(
+                    child: Text(
+                      'İniş durağı',
+                      style: AppTextStyles.screenSubtitle.copyWith(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.white,
+                      ),
+                    ),
                   ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              ExcludeSemantics(
-                child: Text(
-                  'Bu durak, ineceğiniz duraktır.',
-                  style: AppTextStyles.screenSubtitle.copyWith(
-                    fontSize: 22,
-                    height: 1.35,
+                  const SizedBox(height: 4),
+                  ExcludeSemantics(
+                    child: Text(
+                      stopName,
+                      style: AppTextStyles.buttonLabel.copyWith(
+                        fontSize: 36,
+                        fontWeight: FontWeight.w900,
+                        color: AppColors.white,
+                      ),
+                    ),
                   ),
-                ),
-              ),
-              const SizedBox(height: 8),
-              ExcludeSemantics(
-                child: Text(
-                  'Lütfen güvenli şekilde inin.',
-                  style: AppTextStyles.screenSubtitle.copyWith(
-                    fontSize: 22,
-                    height: 1.35,
+                  const ExcludeSemantics(
+                    child: Divider(
+                      height: 32,
+                      thickness: 1,
+                      color: AppColors.gray700,
+                    ),
                   ),
-                ),
+                  ExcludeSemantics(
+                    child: Text(
+                      infoMessageVisual,
+                      style: AppTextStyles.screenSubtitle.copyWith(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.white,
+                        height: 1.35,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
-        const SizedBox(height: 12),
         _buildProgressIndicator(),
       ],
     );
@@ -356,35 +462,42 @@ class _JourneyStepsScreenState extends State<JourneyStepsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Semantics(
-          label:
-              'Yolculuk tamamlandı. Rota bilgilerinizi tekrar incelemek için geri dönebilirsiniz.',
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              ExcludeSemantics(
-                child: Text(
-                  'Yolculuk tamamlandı.',
-                  style: AppTextStyles.buttonLabel.copyWith(
-                    fontSize: 28,
-                    fontWeight: FontWeight.w800,
+        Expanded(
+          child: SingleChildScrollView(
+            physics: const ClampingScrollPhysics(),
+            child: Semantics(
+              label:
+                  'Yolculuk tamamlandı. Rota bilgilerinizi tekrar incelemek için geri dönebilirsiniz.',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ExcludeSemantics(
+                    child: Text(
+                      'Yolculuk tamamlandı.',
+                      style: AppTextStyles.buttonLabel.copyWith(
+                        fontSize: 32,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.white,
+                      ),
+                    ),
                   ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              ExcludeSemantics(
-                child: Text(
-                  'Rota bilgilerinizi tekrar incelemek için geri dönebilirsiniz.',
-                  style: AppTextStyles.screenSubtitle.copyWith(
-                    fontSize: 20,
-                    height: 1.35,
+                  const SizedBox(height: 12),
+                  ExcludeSemantics(
+                    child: Text(
+                      'Rota bilgilerinizi tekrar incelemek için geri dönebilirsiniz.',
+                      style: AppTextStyles.screenSubtitle.copyWith(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.white,
+                        height: 1.35,
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
-        const SizedBox(height: 12),
         _buildProgressIndicator(),
       ],
     );
@@ -425,6 +538,7 @@ class _JourneyStepsScreenState extends State<JourneyStepsScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    SizedBox(height: _topContentSpacing),
                     Semantics(
                       header: true,
                       child: Text(
@@ -434,16 +548,20 @@ class _JourneyStepsScreenState extends State<JourneyStepsScreen> {
                     ),
                     const SizedBox(height: AppSpacing.spaceY4),
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 28,
-                        vertical: 32,
+                      height: _cardHeight,
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 32,
+                        vertical: _cardVerticalPadding,
                       ),
                       decoration: BoxDecoration(
                         color: AppColors.gray800,
                         borderRadius: BorderRadius.circular(
                           AppRadius.rounded2xl,
                         ),
-                        border: Border.all(color: _stageBorderColor),
+                        border: Border.all(
+                          color: _stageBorderColor,
+                          width: 1.4,
+                        ),
                       ),
                       child: _buildCardContent(),
                     ),

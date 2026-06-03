@@ -33,8 +33,9 @@ class ArrivalScreen extends StatelessWidget {
             child: Text(
               'Beklenecek otobüs',
               style: AppTextStyles.screenSubtitle.copyWith(
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+                color: AppColors.white,
               ),
             ),
           ),
@@ -43,8 +44,9 @@ class ArrivalScreen extends StatelessWidget {
             child: Text(
               routeName,
               style: AppTextStyles.buttonLabel.copyWith(
-                fontSize: 40,
+                fontSize: 52,
                 fontWeight: FontWeight.w900,
+                color: AppColors.white,
               ),
             ),
           ),
@@ -56,36 +58,34 @@ class ArrivalScreen extends StatelessWidget {
   Widget _buildInfoRow({
     required String label,
     required String value,
-    bool isLast = false,
   }) {
-    return Padding(
-      padding: EdgeInsets.only(bottom: isLast ? 0 : 16),
-      child: Semantics(
-        label: '$label: $value',
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ExcludeSemantics(
-              child: Text(
-                label,
-                style: AppTextStyles.screenSubtitle.copyWith(
-                  fontSize: 19,
-                  fontWeight: FontWeight.w700,
-                ),
+    return Semantics(
+      label: '$label: $value',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ExcludeSemantics(
+            child: Text(
+              label,
+              style: AppTextStyles.screenSubtitle.copyWith(
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+                color: AppColors.white,
               ),
             ),
-            const SizedBox(height: 4),
-            ExcludeSemantics(
-              child: Text(
-                value,
-                style: AppTextStyles.buttonLabel.copyWith(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w700,
-                ),
+          ),
+          const SizedBox(height: 4),
+          ExcludeSemantics(
+            child: Text(
+              value,
+              style: AppTextStyles.buttonLabel.copyWith(
+                fontSize: 30,
+                fontWeight: FontWeight.w800,
+                color: AppColors.white,
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -115,25 +115,38 @@ class ArrivalScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: AppSpacing.spaceY4),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 30),
+                      constraints: const BoxConstraints(minHeight: 430),
+                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 34),
                       decoration: BoxDecoration(
                         color: AppColors.gray800,
                         borderRadius: BorderRadius.circular(AppRadius.rounded2xl),
-                        border: Border.all(color: AppColors.borderBlue500),
+                        border: Border.all(color: AppColors.borderBlue500, width: 1.4),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           _buildMainRouteInfo(routeName: journeyPlan.routeName),
-                          const SizedBox(height: 20),
+                          const ExcludeSemantics(
+                            child: Divider(
+                              height: 28,
+                              thickness: 1,
+                              color: AppColors.gray700,
+                            ),
+                          ),
                           _buildInfoRow(
                             label: 'Bulunduğunuz durak',
                             value: journeyPlan.startStopName,
                           ),
+                          const ExcludeSemantics(
+                            child: Divider(
+                              height: 28,
+                              thickness: 1,
+                              color: AppColors.gray700,
+                            ),
+                          ),
                           _buildInfoRow(
                             label: 'İneceğiniz durak',
                             value: journeyPlan.endStopName,
-                            isLast: true,
                           ),
                         ],
                       ),
