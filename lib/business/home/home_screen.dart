@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
+import 'package:speech_to_text/speech_to_text.dart';
 
-import 'package:yol_arkadasim/core/widgets/app_button.dart';
-import 'package:yol_arkadasim/business/nearby/nearby_screen.dart';
-import 'package:yol_arkadasim/business/search/search_screen.dart';
-import 'package:yol_arkadasim/core/widgets/app_navigation_bar.dart';
 import 'package:yol_arkadasim/business/favorites/favorites_screen.dart';
+import 'package:yol_arkadasim/business/nearby/nearby_screen.dart';
+import 'package:yol_arkadasim/business/place_results/place_results_screen.dart';
+import 'package:yol_arkadasim/business/search/search_screen.dart';
 import 'package:yol_arkadasim/core/theme/app_colors.dart';
 import 'package:yol_arkadasim/core/theme/app_radius.dart';
 import 'package:yol_arkadasim/core/theme/app_spacing.dart';
 import 'package:yol_arkadasim/core/theme/app_text_styles.dart';
+import 'package:yol_arkadasim/core/widgets/app_button.dart';
+import 'package:yol_arkadasim/core/widgets/app_navigation_bar.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -21,10 +24,108 @@ class _HomeScreenState extends State<HomeScreen> {
   static const double _homeActionIconSize = 50;
   static const double _homeActionIconTextGap = 8;
 
-  void handleVoiceResult(String text) {
-    debugPrint('Sesli komut alındı (demo): $text');
-    // TODO: speak('$text alındı') - voice announcement (UI-only)
-    // TODO: vibrate short
+  final SpeechToText _speech = SpeechToText();
+  bool _isListening = false;
+  bool _voiceResultHandled = false;
+  String _lastRecognizedWords = '';
+
+  @override
+  void dispose() {
+    _speech.stop();
+    super.dispose();
+  }
+
+  Future<void> _announce(String message) async {
+    if (!mounted) return;
+    SemanticsService.announce(message, Directionality.of(context));
+  }
+
+  void _navigateToVoiceSearchResults(String query) {
+    if (!mounted || _voiceResultHandled) return;
+    _voiceResultHandled = true;
+    setState(() => _isListening = false);
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => PlaceResultsScreen(searchQuery: query),
+      ),
+    );
+  }
+
+  Future<void> _onVoiceListeningEnded() async {
+    if (!mounted || _voiceResultHandled) return;
+
+    final text = _lastRecognizedWords.trim();
+    if (text.isNotEmpty) {
+      _navigateToVoiceSearchResults(text);
+      return;
+    }
+
+    setState(() => _isListening = false);
+    await _announce('Ses algılanamadı. Lütfen tekrar deneyin.');
+  }
+
+  Future<void> _handleVoiceSearchUnavailable() async {
+    if (!mounted || _voiceResultHandled) return;
+    setState(() => _isListening = false);
+    await _announce(
+      'Sesli arama şu anda kullanılamıyor. Lütfen hedefi yazarak arayın.',
+    );
+  }
+
+  Future<void> _handleVoiceSearch() async {
+    if (_isListening) return;
+
+    _voiceResultHandled = false;
+    _lastRecognizedWords = '';
+    setState(() => _isListening = true);
+
+    await _announce('Dinleme başlıyor. Hedefinizi söyleyin.');
+    await Future.delayed(const Duration(milliseconds: 400));
+
+    if (!mounted) return;
+
+    try {
+      final available = await _speech.initialize(
+        onError: (_) => _handleVoiceSearchUnavailable(),
+        onStatus: (status) {
+          if (status == 'done' || status == 'notListening') {
+            _onVoiceListeningEnded();
+          }
+        },
+      );
+
+      if (!available) {
+        await _handleVoiceSearchUnavailable();
+        return;
+      }
+
+      if (!mounted) return;
+
+      await _announce('Dinleniyor. Hedefinizi söyleyin.');
+
+      await _speech.listen(
+        onResult: (result) {
+          if (_voiceResultHandled) return;
+          final text = result.recognizedWords.trim();
+          if (text.isNotEmpty) {
+            _lastRecognizedWords = text;
+          }
+          if (result.finalResult && text.isNotEmpty) {
+            _speech.stop();
+            _navigateToVoiceSearchResults(text);
+          }
+        },
+        listenOptions: SpeechListenOptions(
+          listenFor: const Duration(seconds: 8),
+          pauseFor: const Duration(seconds: 2),
+          localeId: 'tr_TR',
+          cancelOnError: true,
+        ),
+      );
+    } catch (_) {
+      await _handleVoiceSearchUnavailable();
+    }
   }
 
   void handleSearchDestination() {
@@ -32,7 +133,6 @@ class _HomeScreenState extends State<HomeScreen> {
       context,
       MaterialPageRoute(builder: (_) => const SearchScreen()),
     );
-    // TODO: announce navigation
   }
 
   void handleNearbyStops() {
@@ -43,7 +143,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void handleButtonPress(String action) {
-    // short visual feedback only
     switch (action) {
       case 'search':
         handleSearchDestination();
@@ -69,6 +168,7 @@ class _HomeScreenState extends State<HomeScreen> {
     required String title,
     MainAxisAlignment mainAxisAlignment = MainAxisAlignment.start,
     bool expandedTitle = true,
+    bool isLoading = false,
   }) {
     final titleText = Text(
       title,
@@ -86,6 +186,7 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor: color,
       borderRadius: AppRadius.roundedXl,
       minHeight: minHeight,
+      isLoading: isLoading,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         mainAxisAlignment: mainAxisAlignment,
@@ -165,14 +266,16 @@ class _HomeScreenState extends State<HomeScreen> {
                 flex: 2,
                 child: _buildColoredMainCard(
                   color: AppColors.blue600,
-                  onPressed: () => handleVoiceResult('İstiklal Caddesi'),
-                  semanticsLabel:
-                      'Sesli komut, demo modunda örnek komut çalıştırır',
+                  onPressed: _handleVoiceSearch,
+                  semanticsLabel: _isListening
+                      ? 'Dinleniyor. Hedefinizi söyleyin.'
+                      : 'Sesli hedef ara, gitmek istediğiniz hedefi söylemek için çift dokunun.',
                   minHeight: 0,
                   icon: Icons.mic_none,
                   title: 'Sesli Komut',
                   mainAxisAlignment: MainAxisAlignment.center,
                   expandedTitle: false,
+                  isLoading: _isListening,
                 ),
               ),
             ],
