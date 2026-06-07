@@ -117,8 +117,8 @@ class _HomeScreenState extends State<HomeScreen> {
           }
         },
         listenOptions: SpeechListenOptions(
-          listenFor: const Duration(seconds: 8),
-          pauseFor: const Duration(seconds: 2),
+          listenFor: const Duration(seconds: 15),
+          pauseFor: const Duration(seconds: 5),
           localeId: 'tr_TR',
           cancelOnError: true,
         ),
