@@ -7,9 +7,9 @@ enum BeaconType {
 class BeaconDetection {
   static const String projectUuid = 'E2C56DB5-DFFB-48D2-B060-D0F5A71096E0';
 
-  static const int busApproachingThreshold = -75;
-  static const int busVeryCloseThreshold = -60;
-  static const int targetStopReachedThreshold = -65;
+  static const int busApproachingThreshold = -65;
+  static const int busVeryCloseThreshold = -50;
+  static const int targetStopReachedThreshold = -45;
 
   final String uuid;
   final int major;
