@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 
+import 'package:yol_arkadasim/core/accessibility/accessibility_settings_service.dart';
 import 'package:yol_arkadasim/core/theme/app_colors.dart';
 import 'package:yol_arkadasim/core/theme/app_radius.dart';
 import 'package:yol_arkadasim/core/theme/app_spacing.dart';
@@ -12,6 +13,7 @@ import 'package:yol_arkadasim/core/widgets/app_navigation_bar.dart';
 import 'package:yol_arkadasim/data/models/beacon_detection.dart';
 import 'package:yol_arkadasim/data/models/transit_models.dart';
 import 'package:yol_arkadasim/services/beacon_scanner_service.dart';
+import 'package:yol_arkadasim/services/vibration_service.dart';
 
 enum _JourneySimulationStage {
   onBus,
@@ -31,8 +33,11 @@ class JourneyStepsScreen extends StatefulWidget {
 }
 
 class _JourneyStepsScreenState extends State<JourneyStepsScreen> {
+  final AccessibilitySettingsService _accessibilitySettingsService =
+      AccessibilitySettingsService();
   final BeaconScannerService _scanner = BeaconScannerService();
   StreamSubscription<List<BeaconDetection>>? _detectionsSubscription;
+  VibrationService? _vibrationService;
 
   _JourneySimulationStage _stage = _JourneySimulationStage.onBus;
   Timer? _simulationTimer;
@@ -157,7 +162,17 @@ class _JourneyStepsScreenState extends State<JourneyStepsScreen> {
       onError: (_) {},
     );
     unawaited(_scanner.startScan());
+    unawaited(_loadHapticSettings());
     _startSimulationTimer();
+  }
+
+  Future<void> _loadHapticSettings() async {
+    final enabled =
+        await _accessibilitySettingsService.getHapticFeedbackEnabled();
+    if (!mounted) {
+      return;
+    }
+    _vibrationService = VibrationService(vibrationEnabled: enabled);
   }
 
   void _onBeaconDetections(List<BeaconDetection> detections) {
@@ -192,6 +207,11 @@ class _JourneyStepsScreenState extends State<JourneyStepsScreen> {
         'İniş durağına ulaştınız. İniş durağı: ${widget.journeyPlan.endStopName}. '
         'Lütfen güvenli şekilde inin.';
     SemanticsService.announce(message, Directionality.of(context));
+
+    final vibrationService = _vibrationService;
+    if (vibrationService != null) {
+      unawaited(vibrationService.vibrateArrival());
+    }
   }
 
   void _announceStageChange(_JourneySimulationStage stage) {

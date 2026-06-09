@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 
 import 'package:yol_arkadasim/business/journey_steps/journey_steps_screen.dart';
+import 'package:yol_arkadasim/core/accessibility/accessibility_settings_service.dart';
 import 'package:yol_arkadasim/core/theme/app_colors.dart';
 import 'package:yol_arkadasim/core/theme/app_radius.dart';
 import 'package:yol_arkadasim/core/theme/app_spacing.dart';
@@ -13,6 +14,7 @@ import 'package:yol_arkadasim/core/widgets/app_navigation_bar.dart';
 import 'package:yol_arkadasim/data/models/beacon_detection.dart';
 import 'package:yol_arkadasim/data/models/transit_models.dart';
 import 'package:yol_arkadasim/services/beacon_scanner_service.dart';
+import 'package:yol_arkadasim/services/vibration_service.dart';
 
 enum _BusBeaconStatus {
   waiting,
@@ -30,8 +32,11 @@ class ArrivalScreen extends StatefulWidget {
 }
 
 class _ArrivalScreenState extends State<ArrivalScreen> {
+  final AccessibilitySettingsService _accessibilitySettingsService =
+      AccessibilitySettingsService();
   final BeaconScannerService _scanner = BeaconScannerService();
   StreamSubscription<List<BeaconDetection>>? _detectionsSubscription;
+  VibrationService? _vibrationService;
 
   _BusBeaconStatus _busStatus = _BusBeaconStatus.waiting;
   bool _announcedApproaching = false;
@@ -63,6 +68,16 @@ class _ArrivalScreenState extends State<ArrivalScreen> {
       onError: (_) {},
     );
     unawaited(_scanner.startScan());
+    unawaited(_loadHapticSettings());
+  }
+
+  Future<void> _loadHapticSettings() async {
+    final enabled =
+        await _accessibilitySettingsService.getHapticFeedbackEnabled();
+    if (!mounted) {
+      return;
+    }
+    _vibrationService = VibrationService(vibrationEnabled: enabled);
   }
 
   void _onDetections(List<BeaconDetection> detections) {
@@ -101,9 +116,17 @@ class _ArrivalScreenState extends State<ArrivalScreen> {
     if (newStatus == _BusBeaconStatus.approaching && !_announcedApproaching) {
       _announcedApproaching = true;
       SemanticsService.announce(_beaconStatusMessage, TextDirection.ltr);
+      final vibrationService = _vibrationService;
+      if (vibrationService != null) {
+        unawaited(vibrationService.vibrateShort());
+      }
     } else if (newStatus == _BusBeaconStatus.veryClose && !_announcedVeryClose) {
       _announcedVeryClose = true;
       SemanticsService.announce(_beaconStatusMessage, TextDirection.ltr);
+      final vibrationService = _vibrationService;
+      if (vibrationService != null) {
+        unawaited(vibrationService.vibrateLong());
+      }
     }
   }
 
