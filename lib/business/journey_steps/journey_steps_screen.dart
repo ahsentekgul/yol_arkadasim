@@ -3,17 +3,22 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 
+import 'package:yol_arkadasim/core/accessibility/accessibility_settings_service.dart';
 import 'package:yol_arkadasim/core/theme/app_colors.dart';
 import 'package:yol_arkadasim/core/theme/app_radius.dart';
 import 'package:yol_arkadasim/core/theme/app_spacing.dart';
 import 'package:yol_arkadasim/core/theme/app_text_styles.dart';
 import 'package:yol_arkadasim/core/widgets/app_button.dart';
 import 'package:yol_arkadasim/core/widgets/app_navigation_bar.dart';
+import 'package:yol_arkadasim/data/models/beacon_detection.dart';
 import 'package:yol_arkadasim/data/models/transit_models.dart';
+import 'package:yol_arkadasim/services/beacon_scanner_service.dart';
+import 'package:yol_arkadasim/services/vibration_service.dart';
 
 enum _JourneySimulationStage {
   onBus,
   oneStopBefore,
+  waitingForTargetStopBeacon,
   arrivedAtEndStop,
   completed,
 }
@@ -28,9 +33,17 @@ class JourneyStepsScreen extends StatefulWidget {
 }
 
 class _JourneyStepsScreenState extends State<JourneyStepsScreen> {
+  final AccessibilitySettingsService _accessibilitySettingsService =
+      AccessibilitySettingsService();
+  final BeaconScannerService _scanner = BeaconScannerService();
+  StreamSubscription<List<BeaconDetection>>? _detectionsSubscription;
+  VibrationService? _vibrationService;
+
   _JourneySimulationStage _stage = _JourneySimulationStage.onBus;
   Timer? _simulationTimer;
   int _elapsedSeconds = 0;
+  bool _targetStopReached = false;
+
   static const int _travelSimulationSeconds = 15;
   static const int _oneStopWarningSeconds = 5;
 
@@ -38,10 +51,11 @@ class _JourneyStepsScreenState extends State<JourneyStepsScreen> {
       _travelSimulationSeconds + _oneStopWarningSeconds;
 
   double get _progressValue {
-    if (_stage == _JourneySimulationStage.completed) {
+    if (_stage == _JourneySimulationStage.arrivedAtEndStop ||
+        _stage == _JourneySimulationStage.completed) {
       return 1.0;
     }
-    return (_elapsedSeconds / _totalSimulationSeconds).clamp(0.0, 1.0);
+    return (_elapsedSeconds / _totalSimulationSeconds).clamp(0.0, 0.9);
   }
 
   String get _progressSemanticValue {
@@ -50,6 +64,8 @@ class _JourneyStepsScreenState extends State<JourneyStepsScreen> {
         return 'Otobüstesiniz. İneceğiniz durağa doğru ilerliyorsunuz.';
       case _JourneySimulationStage.oneStopBefore:
         return 'İnilecek durağa yaklaşıyorsunuz. İnmenize 1 durak kaldı.';
+      case _JourneySimulationStage.waitingForTargetStopBeacon:
+        return 'Hedef durak sinyali bekleniyor.';
       case _JourneySimulationStage.arrivedAtEndStop:
         return 'İniş durağına ulaşıldı.';
       case _JourneySimulationStage.completed:
@@ -63,6 +79,8 @@ class _JourneyStepsScreenState extends State<JourneyStepsScreen> {
         return 'Yolculuk başladı';
       case _JourneySimulationStage.oneStopBefore:
         return 'İnmenize 1 durak kaldı';
+      case _JourneySimulationStage.waitingForTargetStopBeacon:
+        return 'Hedef durak bekleniyor';
       case _JourneySimulationStage.arrivedAtEndStop:
         return 'İniş durağına ulaştınız';
       case _JourneySimulationStage.completed:
@@ -73,11 +91,13 @@ class _JourneyStepsScreenState extends State<JourneyStepsScreen> {
   String get _approachWarningMessage {
     switch (_stage) {
       case _JourneySimulationStage.onBus:
-        return 'İneceğiniz durağa yaklaştığınızda sizi uyaracağız.';
+        return 'Yolculuğunuz başladı. İneceğiniz durak takip ediliyor.';
       case _JourneySimulationStage.oneStopBefore:
-        return 'İnmeye hazırlanın. Bir sonraki durakta ineceksiniz: ${widget.journeyPlan.endStopName}.';
+        return 'İniş durağına yaklaşıyorsunuz. İnmeye hazırlanın.';
+      case _JourneySimulationStage.waitingForTargetStopBeacon:
+        return 'Hedef durak sinyali bekleniyor. İniş durağı algılandığında sizi uyaracağız.';
       case _JourneySimulationStage.arrivedAtEndStop:
-        return '${widget.journeyPlan.endStopName} durağına geldiniz. Bu durak, ineceğiniz duraktır. Lütfen güvenli şekilde inin.';
+        return 'İniş durağına ulaştınız. Lütfen güvenli şekilde inin.';
       case _JourneySimulationStage.completed:
         return 'Yolculuk tamamlandı.';
     }
@@ -89,6 +109,8 @@ class _JourneyStepsScreenState extends State<JourneyStepsScreen> {
         return AppColors.borderGreen500;
       case _JourneySimulationStage.oneStopBefore:
         return AppColors.borderOrange500;
+      case _JourneySimulationStage.waitingForTargetStopBeacon:
+        return AppColors.borderBlue500;
       case _JourneySimulationStage.arrivedAtEndStop:
         return AppColors.borderBlue500;
       case _JourneySimulationStage.completed:
@@ -102,6 +124,8 @@ class _JourneyStepsScreenState extends State<JourneyStepsScreen> {
         return 520;
       case _JourneySimulationStage.oneStopBefore:
         return 520;
+      case _JourneySimulationStage.waitingForTargetStopBeacon:
+        return 500;
       case _JourneySimulationStage.arrivedAtEndStop:
         return 460;
       case _JourneySimulationStage.completed:
@@ -122,6 +146,7 @@ class _JourneyStepsScreenState extends State<JourneyStepsScreen> {
     switch (_stage) {
       case _JourneySimulationStage.onBus:
       case _JourneySimulationStage.oneStopBefore:
+      case _JourneySimulationStage.waitingForTargetStopBeacon:
         return 20;
       case _JourneySimulationStage.arrivedAtEndStop:
       case _JourneySimulationStage.completed:
@@ -132,7 +157,61 @@ class _JourneyStepsScreenState extends State<JourneyStepsScreen> {
   @override
   void initState() {
     super.initState();
+    _detectionsSubscription = _scanner.detectionsStream.listen(
+      _onBeaconDetections,
+      onError: (_) {},
+    );
+    unawaited(_scanner.startScan());
+    unawaited(_loadHapticSettings());
     _startSimulationTimer();
+  }
+
+  Future<void> _loadHapticSettings() async {
+    final enabled =
+        await _accessibilitySettingsService.getHapticFeedbackEnabled();
+    if (!mounted) {
+      return;
+    }
+    _vibrationService = VibrationService(vibrationEnabled: enabled);
+  }
+
+  void _onBeaconDetections(List<BeaconDetection> detections) {
+    if (!mounted || _targetStopReached) {
+      return;
+    }
+
+    for (final detection in detections) {
+      if (detection.isTargetStop && detection.isTargetStopReached) {
+        _handleTargetStopReached();
+        return;
+      }
+    }
+  }
+
+  void _handleTargetStopReached() {
+    if (_targetStopReached) {
+      return;
+    }
+    _targetStopReached = true;
+    _simulationTimer?.cancel();
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _stage = _JourneySimulationStage.arrivedAtEndStop;
+    });
+
+    final message =
+        'İniş durağına ulaştınız. İniş durağı: ${widget.journeyPlan.endStopName}. '
+        'Lütfen güvenli şekilde inin.';
+    SemanticsService.announce(message, Directionality.of(context));
+
+    final vibrationService = _vibrationService;
+    if (vibrationService != null) {
+      unawaited(vibrationService.vibrateArrival());
+    }
   }
 
   void _announceStageChange(_JourneySimulationStage stage) {
@@ -143,9 +222,10 @@ class _JourneyStepsScreenState extends State<JourneyStepsScreen> {
       case _JourneySimulationStage.oneStopBefore:
         message =
             'İnmenize 1 durak kaldı. Sonraki durak: ${widget.journeyPlan.endStopName}. Sonraki durak iniş durağınız. Lütfen inmeye hazırlanın.';
+      case _JourneySimulationStage.waitingForTargetStopBeacon:
+        return;
       case _JourneySimulationStage.arrivedAtEndStop:
-        message =
-            'İniş durağına ulaştınız. İniş durağı: ${widget.journeyPlan.endStopName}. Bu durak, ineceğiniz duraktır. Lütfen güvenli şekilde inin.';
+        return;
       case _JourneySimulationStage.completed:
         message = 'Yolculuk tamamlandı.';
     }
@@ -159,7 +239,8 @@ class _JourneyStepsScreenState extends State<JourneyStepsScreen> {
         timer.cancel();
         return;
       }
-      if (_stage == _JourneySimulationStage.arrivedAtEndStop) {
+      if (_stage == _JourneySimulationStage.arrivedAtEndStop ||
+          _stage == _JourneySimulationStage.waitingForTargetStopBeacon) {
         timer.cancel();
         return;
       }
@@ -171,13 +252,13 @@ class _JourneyStepsScreenState extends State<JourneyStepsScreen> {
           _stage = _JourneySimulationStage.oneStopBefore;
         } else if (_elapsedSeconds >= _totalSimulationSeconds &&
             _stage == _JourneySimulationStage.oneStopBefore) {
-          _stage = _JourneySimulationStage.arrivedAtEndStop;
+          _stage = _JourneySimulationStage.waitingForTargetStopBeacon;
         }
       });
       if (_stage != previousStage) {
         _announceStageChange(_stage);
       }
-      if (_stage == _JourneySimulationStage.arrivedAtEndStop) {
+      if (_stage == _JourneySimulationStage.waitingForTargetStopBeacon) {
         timer.cancel();
         _simulationTimer?.cancel();
       }
@@ -391,6 +472,70 @@ class _JourneyStepsScreenState extends State<JourneyStepsScreen> {
     );
   }
 
+  Widget _buildWaitingForBeaconContent() {
+    final stopName = widget.journeyPlan.endStopName;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: SingleChildScrollView(
+            physics: const ClampingScrollPhysics(),
+            child: Semantics(
+              label:
+                  'Hedef durak sinyali bekleniyor. İniş durağı: $stopName. '
+                  'İniş durağı algılandığında sizi uyaracağız.',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ExcludeSemantics(
+                    child: Text(
+                      'İniş durağı',
+                      style: AppTextStyles.screenSubtitle.copyWith(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.white,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  ExcludeSemantics(
+                    child: Text(
+                      stopName,
+                      style: AppTextStyles.buttonLabel.copyWith(
+                        fontSize: 36,
+                        fontWeight: FontWeight.w900,
+                        color: AppColors.white,
+                      ),
+                    ),
+                  ),
+                  const ExcludeSemantics(
+                    child: Divider(
+                      height: 32,
+                      thickness: 1,
+                      color: AppColors.gray700,
+                    ),
+                  ),
+                  ExcludeSemantics(
+                    child: Text(
+                      _approachWarningMessage,
+                      style: AppTextStyles.screenSubtitle.copyWith(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.white,
+                        height: 1.35,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        _buildProgressIndicator(),
+      ],
+    );
+  }
+
   Widget _buildArrivedContent() {
     final stopName = widget.journeyPlan.endStopName;
     const infoMessageSemantic =
@@ -509,6 +654,8 @@ class _JourneyStepsScreenState extends State<JourneyStepsScreen> {
         return _buildOnBusContent();
       case _JourneySimulationStage.oneStopBefore:
         return _buildWarningContent();
+      case _JourneySimulationStage.waitingForTargetStopBeacon:
+        return _buildWaitingForBeaconContent();
       case _JourneySimulationStage.arrivedAtEndStop:
         return _buildArrivedContent();
       case _JourneySimulationStage.completed:
@@ -519,6 +666,8 @@ class _JourneyStepsScreenState extends State<JourneyStepsScreen> {
   @override
   void dispose() {
     _simulationTimer?.cancel();
+    _detectionsSubscription?.cancel();
+    _scanner.dispose();
     super.dispose();
   }
 
